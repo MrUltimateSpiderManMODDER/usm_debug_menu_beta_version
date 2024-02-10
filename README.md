@@ -8,6 +8,11 @@
 
 Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_menu_beta_version/releases/tag/v1)
 
+## How to Compile
+
+Use Visual Studio Only and compile in release mode.
+
+
 ## Installation
 
 * Rename `binkw32.dll` in the game's folder to `binkw32_.dll`
