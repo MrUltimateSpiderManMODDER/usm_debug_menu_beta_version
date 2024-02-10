@@ -40,15 +40,15 @@ Allows to teleport to any in-game region
 
 ### District variants
 
-Allows to switch between variants of given regions
+Allows to switch between variants of given regions.
 
 ### Entity variants
 
-There are list of entity variants menu
+There are list of entity variants menu.
 
 ### Missions
 
-You can replay all missions of this game and a few emergencies
+You can replay all missions of this game and a few emergencies.
 
 
 ### Level Select
@@ -63,21 +63,31 @@ Note exist only --REBOOT-- and city options.
 
 Allows to switch between *all* available characters
 
-**NOTE**: `peter_parker` and `peter_hooded` are versions of peter without powers, used in the first missions of the game
+**NOTE**: `peter_parker` and `peter_hooded` are versions of peter without powers, used in the first missions of the game.
 
-### Options
+### Game
 
-Allows to modify in-game flags that controls certain behaviours
+Allows to modify in-game flags that controls certain behaviours.
 
-* Live in Glass House: disables the `Area unavailable` messages
+### DevOpt Flags
+
+There are list of flags options available
+
+Allows to modify flags that controls certain behaviours.
+
+### DevOpt Ints
+
+There are list of ints options available
+
+Allows to modify ints that controls certain behaviours.
 
 ### Script
 
-Access to in-game scripts that allow the player to tap into debug features
+Access to in-game scripts that allow the player to tap into debug features.
 
 ### Progression
 
-Set your progress to any point in the game
+Set your progress to any point in the game.
 
 ## Extending functionality
 
