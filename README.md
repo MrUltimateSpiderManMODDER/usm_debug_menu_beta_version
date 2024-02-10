@@ -89,6 +89,10 @@ Access to in-game scripts that allow the player to tap into debug features.
 
 Set your progress to any point in the game.
 
+### Camera
+
+you can switch camera states Chase, User and SceneAnalizer.
+
 ## Extending functionality
 
 If you desire to add any new option(s) to the menu, it's very simple.
