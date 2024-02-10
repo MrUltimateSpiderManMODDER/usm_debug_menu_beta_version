@@ -21,6 +21,15 @@ Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_
 * **LEFT/RIGHT Arrows** - changes the value of the current **boolean** option
 * **ESCAPE** - go to previous menu
 
+## Usage DS4/DS5 Controller
+
+* **PS BUTTON** - opens and closes the menu
+* **UP/DOWN Pads** - moves the current select option up and down
+* **CROSS BUTTON** - executes the selected option
+* **LEFT/RIGHT Pad Arrows** - changes the value of the current **boolean** option
+* **CIRCLE BUTTON** - go to previous menu
+
+
 ## Current implemented options
 
 ### Warp
@@ -33,7 +42,24 @@ Allows to teleport to any in-game region
 
 Allows to switch between variants of given regions
 
-### Char Select
+### Entity variants
+
+There are list of entity variants menu
+
+### Missions
+
+You can replay all missions of this game and a few emergencies
+
+
+### Level Select
+
+There are list of levels available that not working and crash the game if you load city option
+
+Note exist only --REBOOT-- and city options.
+
+
+
+### Hero Select
 
 Allows to switch between *all* available characters
 
