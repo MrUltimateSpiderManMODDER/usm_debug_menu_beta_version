@@ -6,7 +6,7 @@
 
 ## Download
 
-Get the menu from [here](https://github.com/krystalgamer/usm-debug-menu/releases)
+Get the menu from [here]([https://github.com/krystalgamer/usm-debug-menu/releases](https://github.com/MrUltimateSpiderManMODDER/usm_debug_menu_beta_version/releases/tag/v1))
 
 ## Installation
 
