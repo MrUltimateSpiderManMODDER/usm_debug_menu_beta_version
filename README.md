@@ -11,7 +11,19 @@ Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_
 ## Installation
 
 * Rename `binkw32.dll` in the game's folder to `binkw32_.dll`
-* Copy the `binkw32.dll` in the zip file to the game's folder
+* Copy the `binkw32_.dll` to the game's folder
+
+## Installation Debug Menu with Modded exe
+
+* Rename `binkw32.dll` in the game's folder to `debug_menu.dll`
+* Copy the `debug_menu.dll` to the game's folder
+
+## Download The modded exe
+
+Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_menu_beta_version/releases/tag/v1)
+
+Note: you have need to disable antivirus because detect malvare.
+
 
 ## Usage
 
