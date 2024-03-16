@@ -43,6 +43,8 @@
 
 
 
+
+
 #include "mic.h"
 #include "wds.h"
 
@@ -199,6 +201,11 @@ struct game {
     {
         void(__fastcall * func)(void*, int, bool) = (decltype(func))0x00515230;
         func(this, 0, a2);
+    }
+
+    bool is_physics_enabled() const
+    {
+        return this->flag.physics_enabled;
     }
 
     void enable_marky_cam(bool a2, bool a3, Float a4, Float a5)
@@ -490,8 +497,6 @@ void game::load_new_level(const mString& a1, int a2)
 
     Var<int> g_mem_checkpoint_level = 0x00921DC4;
 
-
-    
 
 
 

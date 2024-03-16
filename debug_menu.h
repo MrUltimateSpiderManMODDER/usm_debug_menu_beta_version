@@ -4,6 +4,8 @@
 
 #include "fixed_pool.h"
 
+#include "input_mgr.h"
+
 #include <cassert>
 #include <algorithm>
 #include <iostream>
@@ -83,6 +85,23 @@ struct debug_menu;
 
 std::string entry_render_callback_default(debug_menu_entry* entry);
 
+typedef void (*custom_string_generator_ptr)(struct debug_menu_entry* entry);
+
+typedef void (*menu_handler_function)(debug_menu_entry*, custom_key_type key_type);
+
+typedef void (*custom_entry_handler_ptr)(struct debug_menu_entry* entry, custom_key_type key_type, menu_handler_function menu_handler);
+
+typedef void (*camera_entry_handler_ptr)(struct debug_menu_entry* entry, custom_key_type key_type, menu_handler_function menu_handler);
+
+
+
+static inline bool physics_state_on_exit = true;
+
+
+static inline bool has_focus = false;
+
+static inline int had_menu_this_frame = 0;
+
 
 
 
@@ -91,11 +110,15 @@ struct debug_menu_entry {
 	debug_menu_entry_type entry_type;
 	void* data;
 	void* data1;
+        void* data2;
     uint16_t m_id {0};
     void* m_id2;
     std::string (*render_callback)(debug_menu_entry *) = entry_render_callback_default;
     void (*m_game_flags_handler)(debug_menu_entry *) = nullptr;
     void (*frame_advance_callback)(debug_menu_entry *) = entry_frame_advance_callback_default;
+    custom_string_generator_ptr custom_string_generator;
+    custom_entry_handler_ptr custom_handler;
+    camera_entry_handler_ptr camera_handler;
    int field_E;
     float field_20[4] = {0.f, 1.f, 0.1f, 10.f};
     bool field_21[2] = { false,true };
@@ -556,27 +579,19 @@ struct debug_menu_entry {
         this->data = (void*)a2;
     }
 
-
     bool set_bval(bool a2, bool a3)
     {
-        if ( !this->is_value_initialized() )
-        {
+        if (!this->is_value_initialized()) {
             auto v4 = this->entry_type;
-            if ( v4 == BOOLEAN_E )
-            {
-                this->data = (void *) a2;
-            }
-            else if ( v4 == POINTER_BOOL )
-            {
+            if (v4 == BOOLEAN_E) {
+                this->data = (void*)a2;
+            } else if (v4 == POINTER_BOOL) {
                 *((BOOL*)this->data) = a2;
-            }
-            else
-            {
+            } else {
                 assert(0);
             }
 
-            if ( this->m_game_flags_handler != nullptr && a3 )
-            {
+            if (this->m_game_flags_handler != nullptr && a3) {
                 this->m_game_flags_handler(this);
             }
         }
@@ -584,11 +599,10 @@ struct debug_menu_entry {
         return this->get_bval();
     }
 
-        void set_bval2(bool a2, int a4)
+        void set_bval2(bool a2)
     {
         this->entry_type = BOOLEAN_E;
         this->data = (void*)a2;
-        this->data = (void*)a4;
     }
 
     bool set_bval2(bool a2, bool a3)
@@ -600,7 +614,7 @@ struct debug_menu_entry {
             }
               else if (v4 == POINTER_HERO)
                 {
-                  *((BYTE*)this->data) = a2;
+                  *((BOOL*)this->data) = a2;
             } else {
                 assert(0);
             }
@@ -676,12 +690,7 @@ struct debug_menu_entry {
         v2[0] = a2[0];
         v2[1] = a2[1];
     }
-        void set_pt_bval2(bool* a2)
-    {
-        this->entry_type = POINTER_BOOL;
-        this->data = a2;
 
-    }
 
     void set_ival(int a2)
     {
@@ -828,7 +837,7 @@ std::string entry_render_callback_default(debug_menu_entry* entry)
     return std::string { "" };
 }
 
-typedef void (*menu_handler_function)(debug_menu_entry*, custom_key_type key_type);
+
 
 
 
@@ -910,6 +919,13 @@ fixed_pool pool = fixed_pool { 28, 16, 4, 1, 0, nullptr };
 
 
     static inline bool physics_state_on_exit = true;
+
+
+static inline debug_menu *active_menu = nullptr;
+
+
+
+
 };
 
 
@@ -947,6 +963,8 @@ void debug_menu_entry::on_select(float a2)
 
         break;
     case BOOLEAN_E:
+        this->on_change(a2, true);
+        this->on_change(a2, false);
     case POINTER_BOOL:
         this->on_change(a2, false);
     case POINTER_HERO:
@@ -1031,6 +1049,9 @@ void debug_menu::add_entry(debug_menu_entry *entry)
 {
     add_debug_menu_entry(this, entry);
 }
+
+
+
 
 debug_menu* create_menu(const char* title, menu_handler_function function, DWORD capacity)
 {
@@ -1150,5 +1171,4 @@ void handle_game_entry(debug_menu_entry *entry, custom_key_type key_type)
 
 static inline bool menu_disabled = false;
 static inline bool debug_enabled = false;
-static inline int had_menu_this_frame = 0;
-static inline int active_menu = 0;
+

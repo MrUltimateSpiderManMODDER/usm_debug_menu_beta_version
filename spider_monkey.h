@@ -8,7 +8,12 @@ Var<bool> god_mode_cheat {0x0095A6A8};
 Var<bool> ultra_god_mode_cheat {0x0095A6A9};
 Var<bool> mega_god_mode_cheat {0x0095A6AA};
 
+
+
+
+
 namespace spider_monkey
+
 {
     void start()
     {
@@ -29,6 +34,9 @@ namespace spider_monkey
     {
         CDECL_CALL(0x004B3B20);
     }
+
+
+    
 
     void render()
     {

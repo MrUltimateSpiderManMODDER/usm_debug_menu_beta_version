@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <iostream>
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -17,6 +18,8 @@
 #pragma comment(lib, "Dinput8.lib")
 #pragma comment(lib, "Dxguid.lib")
 
+
+#include "slf_functions.h"
 #include "devopt.h"
 #include "dvar_menu.h"
 #include "sound_manager.h"
@@ -47,6 +50,7 @@
 #include "app.h"
 #include "main_menu.h"
 #include "pausemenusystem.h"
+
 
 DWORD* entity_variants_current_player = nullptr;
 DWORD* fancy_player_ptr = nullptr;
@@ -550,10 +554,10 @@ int WindowHandler(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 typedef int (__stdcall* GetDeviceState_ptr)(IDirectInputDevice8*, DWORD, LPVOID);
 GetDeviceState_ptr GetDeviceStateOriginal = nullptr;
 
-typedef int(__fastcall* game_pause_unpause_clear_screen_ptr)(void*);
-game_pause_unpause_clear_screen_ptr game_pause = (game_pause_unpause_clear_screen_ptr)0x0054FBE0;
-game_pause_unpause_ptr game_unpause = (game_pause_unpause_clear_screen_ptr)0x0053A880;
-game_pause_unpause_clear_screen_ptr game_clear_screen = (game_pause_unpause_clear_screen_ptr)0x00641BF0;
+typedef int(__fastcall* game_pause_unpause_ptr)(void*);
+game_pause_unpause_ptr game_pause = (game_pause_unpause_ptr)0x0054FBE0;
+game_pause_unpause_ptr game_unpause = (game_pause_unpause_ptr)0x0053A880;
+
 
 typedef int (__fastcall* game_get_cur_state_ptr)(void* );
 game_get_cur_state_ptr game_get_cur_state = (game_get_cur_state_ptr) 0x005363D0;
@@ -569,6 +573,9 @@ entity_teleport_abs_po_ptr entity_teleport_abs_po = (entity_teleport_abs_po_ptr)
 
 typedef DWORD* (__fastcall* entity_variants_entity_variants_core_get_info_node_ptr)(DWORD* , void* edx, int a2, char a3);
 entity_variants_entity_variants_core_get_info_node_ptr entity_variants_entity_variants_core_get_info_node = (entity_variants_entity_variants_core_get_info_node_ptr) 0x006A3390;
+
+typedef void (*us_lighting_switch_time_of_day_ptr)(int time_of_day);
+us_lighting_switch_time_of_day_ptr us_lighting_switch_time_of_day = (us_lighting_switch_time_of_day_ptr)0x00408790;
 
 
 
@@ -852,6 +859,8 @@ typedef enum {
 	MENU_TOGGLE,
 	MENU_ACCEPT,
 	MENU_BACK,
+    MENU_START,
+    MENU_SELECT,
 
 	MENU_UP,
 	MENU_DOWN,
@@ -864,45 +873,98 @@ typedef enum {
 
 uint32_t controllerKeys[MENU_KEY_MAX];
 
-int get_menu_key_value(MenuKey key, int keyboard) {
-	if (keyboard) {
+int get_menu_key_value(MenuKey key,  int keyboard)
+{
+    if (keyboard) {
 
-		int i = 0;
-		switch (key) {
-			case MENU_TOGGLE:
-				i = DIK_INSERT;
-				break;
-			case MENU_ACCEPT:
-				i = DIK_RETURN;
-				break;
-			case MENU_BACK:
-				i = DIK_ESCAPE;
-				break;
+        int i = 0;
+        switch (key) {
+        case MENU_TOGGLE:
+            i = DIK_INSERT;
+            break;
+        case MENU_ACCEPT:
+            i = DIK_RETURN;
+            break;
+        case MENU_BACK:
+            i = DIK_ESCAPE;
+            break;
+        case MENU_START:
+            i = DIK_S;
+            break;
+        case MENU_SELECT:
+            i = DIK_D;
+            break;
 
-			case MENU_UP:
-				i = DIK_UPARROW;
-				break;
-			case MENU_DOWN:
-				i = DIK_DOWNARROW;
-				break;
-			case MENU_LEFT:
-				i = DIK_LEFTARROW;
-				break;
-			case MENU_RIGHT:
-				i = DIK_RIGHTARROW;
-				break;
-		}
-		return keys[i];
-	}
+        case MENU_UP:
+            i = DIK_UPARROW;
+            break;
+        case MENU_DOWN:
+            i = DIK_DOWNARROW;
+            break;
+        case MENU_LEFT:
+            i = DIK_LEFTARROW;
+            break;
+        case MENU_RIGHT:
+            i = DIK_RIGHTARROW;
+            break;
+        }
+        return keys[i];
+    }
 
-
-
-	return controllerKeys[key];
+    return controllerKeys[key];
 }
+int get_menu_key_value2(MenuKey key, int keyboard, MenuKey key2, int keyboard2)
+{
+    if (keyboard) {
+
+        int i = 0;
+        switch (key) {
+        case MENU_TOGGLE:
+            i = DIK_INSERT;
+            break;
+        case MENU_ACCEPT:
+            i = DIK_RETURN;
+            break;
+        case MENU_BACK:
+            i = DIK_ESCAPE;
+            break;
+        case MENU_START:
+            i = DIK_S;
+            break;
+        case MENU_SELECT:
+            i = DIK_D;
+            break;
+
+        case MENU_UP:
+            i = DIK_UPARROW;
+            break;
+        case MENU_DOWN:
+            i = DIK_DOWNARROW;
+            break;
+        case MENU_LEFT:
+            i = DIK_LEFTARROW;
+            break;
+        case MENU_RIGHT:
+            i = DIK_RIGHTARROW;
+            break;
+        }
+        return keys[i];
+    }
+
+    return controllerKeys[key];
+}
+
+
+
 
 
 int is_menu_key_pressed(MenuKey key, int keyboard) {
 	return (get_menu_key_value(key, keyboard) == 2);
+}
+
+int is_menu_key_pressed2(MenuKey key,int keyboard, MenuKey key2, int keyboard2)
+{
+    return (get_menu_key_value2(key, keyboard, key2, keyboard2) == 2);
 }
 
 int is_menu_key_clicked(MenuKey key, int keyboard) {
@@ -951,6 +1013,8 @@ void GetDeviceStateHandleControllerInput(LPVOID lpvData) {
 	read_and_update_controller_key_button(joy, 1, MENU_ACCEPT);
 	read_and_update_controller_key_button(joy, 2, MENU_BACK);
 	read_and_update_controller_key_button(joy, 12, MENU_TOGGLE);
+    read_and_update_controller_key_button(joy, 8, MENU_START);
+    read_and_update_controller_key_button(joy, 9, MENU_SELECT);
 
 	read_and_update_controller_key_dpad(joy, 0, MENU_UP);
 	read_and_update_controller_key_dpad(joy, 9000, MENU_RIGHT);
@@ -1113,9 +1177,14 @@ void populate_missions_menu(debug_menu_entry* entry)
  
         auto* v25 = create_menu(v53.to_string(), debug_menu::sort_mode_t::ascending);
 
-                        auto* v26 = create_menu_entry(v25);
+                         debug_menu_entry v26 { v25 };
+                        add_debug_menu_entry(head_menu,&v26);
 
-                        v25->add_entry(v26);
+        auto* v28 = create_menu("", (menu_handler_function)empty_handler, 10);
+                        debug_menu_entry v30 { v28 };
+        v30.entry_type = NORMAL;
+                        debug_menu_entry v29 { v30 };
+                        add_debug_menu_entry(v25, &v29);
                 }
 
                 std::vector<mission_table_container::script_info> script_infos;
@@ -1154,7 +1223,6 @@ void populate_missions_menu(debug_menu_entry* entry)
                                 auto a2b = mString { 0, "%s (%d)", v15, v18 };
                                 v47 = a2b;
                             }
-
                             auto* v27 = create_menu_entry(v47);
 
                             auto* v43 = v27;
@@ -1234,7 +1302,6 @@ void populate_missions_menu(debug_menu_entry* entry)
 
 
 
-
 void create_missions_menu(debug_menu* parent)
 {
         auto* missions_menu = create_menu("Missions", debug_menu::sort_mode_t::undefined);
@@ -1268,21 +1335,61 @@ void custom()
         g_game_ptr()->enable_physics(false);
 }
 
-void menu_setup(int game_state, int keyboard)
+namespace spider_monkey {
+    bool is_running()
+    {
+        return (bool) CDECL_CALL(0x004B3B60);
+    }
+}
+
+        void tick()
+{
+
+        CDECL_CALL(0x005D6FC0);
+}
+
+                static inline debug_menu* root_menu = nullptr;
+
+
+
+void grab_focus()
+{
+    physics_state_on_exit = !g_game_ptr()->is_physics_enabled();
+    g_game_ptr()->enable_physics(false);
+    has_focus = true;
+}
+
+void show()
+{
+    root_menu = debug_menu::root_menu;
+    grab_focus();
+}
+
+static void hide()
+{
+    close_debug();
+}
+
+
+
+
+void menu_setup(int game_state, int keyboard, int keyboard2)
 {
 
         // debug menu stuff
-        if (is_menu_key_pressed(MENU_TOGGLE, keyboard) && (game_state == 6 || game_state == 7)) {
+    if (is_menu_key_pressed(MENU_TOGGLE, keyboard) && (game_state == 6 || game_state == 7)) {
 
         if (!debug_enabled && game_state == 6) {
             game_unpause(g_game_ptr());
             debug_enabled = !debug_enabled;
             current_menu = debug_menu::root_menu;
             custom();
-            PauseMenuSystem;
+
 
 
         }
+            
+       
 
         else if (!menu_disabled && game_state == 6) {
             game_unpause(g_game_ptr());
@@ -1306,8 +1413,10 @@ void menu_setup(int game_state, int keyboard)
             current_menu = current_menu;
             enable_physics();
         }
+    }
 
- 
+     if (is_menu_key_pressed(MENU_TOGGLE, keyboard) && (game_state == 6 || game_state == 7)) {
+
 
         if (!debug_enabled && game_state == 7) {
             game_unpause(g_game_ptr());
@@ -1378,9 +1487,10 @@ void menu_setup(int game_state, int keyboard)
 
 
 
-
-        }
+        
+    }
 }
+
 
 
 void menu_input_handler(int keyboard, int SCROLL_SPEED) {
@@ -1415,21 +1525,35 @@ void menu_input_handler(int keyboard, int SCROLL_SPEED) {
 	else if (is_menu_key_pressed(MENU_BACK, keyboard)) {
 		current_menu->go_back();
 	}
-	else if (is_menu_key_pressed(MENU_LEFT, keyboard) || is_menu_key_pressed(MENU_RIGHT, keyboard)) {
 
-		debug_menu_entry* cur = &current_menu->entries[current_menu->window_start + current_menu->cur_index];
-                if (cur->entry_type == POINTER_BOOL || cur->entry_type == POINTER_NUM || cur->entry_type == CAMERA_FLOAT || cur->entry_type == POINTER_INT || cur->entry_type == POINTER_FLOAT || cur->entry_type == FLOAT_E ||
-                cur->entry_type == INTEGER
-                ) {
-			//current_menu->handler(cur, (is_menu_key_pressed(MENU_LEFT, keyboard) ? LEFT : RIGHT));
+ 	else if (is_menu_key_pressed(MENU_LEFT, keyboard) || is_menu_key_pressed(MENU_RIGHT, keyboard)) {
 
-            if (is_menu_key_pressed(MENU_LEFT, keyboard)) {
-                cur->on_change(-1.0, false);
+                debug_menu_entry* cur = &current_menu->entries[current_menu->window_start + current_menu->cur_index];
+
+                if (cur->entry_type == POINTER_BOOL || cur->entry_type == POINTER_NUM || cur->entry_type == CAMERA_FLOAT || cur->entry_type == POINTER_INT || cur->entry_type == POINTER_FLOAT || cur->entry_type == FLOAT_E || cur->entry_type == INTEGER) {
+       custom_key_type pressed = (is_menu_key_pressed(MENU_LEFT, keyboard) ? LEFT : RIGHT);
+                        if (is_menu_key_pressed(MENU_LEFT, keyboard)) {
+                            cur->on_change(-1.0, false);
+                        } else {
+                            cur->on_change(1.0, true);
+                        }
+                
+        
+        switch (cur->entry_type) {
+        case BOOLEAN_E:
+            current_menu->handler(cur, pressed);
+            break;
+        case INTEGER:
+            if (cur->custom_handler != NULL) {
+                cur->custom_handler(cur, pressed, current_menu->handler);
             } else {
-                cur->on_change(1.0, true);
+                current_menu->handler(cur, pressed);
             }
         }
-	}
+        
+}
+        }
+
 
 	debug_menu_entry *highlighted = &current_menu->entries[current_menu->window_start + current_menu->cur_index];
     assert(highlighted->frame_advance_callback != nullptr);
@@ -1463,7 +1587,9 @@ HRESULT __stdcall GetDeviceStateHook(IDirectInputDevice8* self, DWORD cbData, LP
 		//printf("INSERT %d %d %c\n", keys[DIK_INSERT], game_state, debug_enabled ? 'y' : 'n');
 
 		int keyboard = cbData == 256;
-		menu_setup(game_state, keyboard);
+        int keyboard2 = cbData == 256;
+        menu_setup(game_state, keyboard, keyboard2);
+
 
 		if (debug_enabled) {
 			menu_input_handler(keyboard, 5);
@@ -1712,15 +1838,13 @@ void set_nop(ptrdiff_t address, size_t num_bytes) {
 
 struct FEMenuSystem;
 
-void install_patches2()
-{
-    FEMenuSystem* a2 = 0;
-    int field_128 = 0;
-    FEMenuSystem* field_12C = a2;
-    int field_120 = 0.0;
-    int field_124 = 0.0;
-    int field_12A = 0;
-}
+
+
+
+
+
+
+
 
 void install_patches() {
 
@@ -1736,7 +1860,7 @@ void install_patches() {
 
     ngl_patch();
 
-    install_patches2();
+
     game_patch();
 
         wds_patch();
@@ -1806,6 +1930,9596 @@ void install_patches() {
 	*/
 }
 
+void dump_vtable(const char* name, DWORD* vtable) {
+	printf("%s|%08X|%08X\n", name, vtable[0], vtable[1]);
+}
+
+void hook_slf_vtable(void* decons, void* action, DWORD* vtable) {
+	vtable[0] = (DWORD)decons;
+	vtable[1] = (DWORD)action;
+}
+
+
+
+
+
+
+
+
+
+
+    int __fastcall slf_deconstructor_abs_delay_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of abs_delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_abs_delay_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of abs_delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663170;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_acos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of acos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_acos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of acos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663F80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_2d_debug_str_vector3d_vector3d_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_2d_debug_str_vector3d_vector3d_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_2d_debug_str_vector3d_vector3d_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_2d_debug_str_vector3d_vector3d_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663360;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_2d_debug_str_vector3d_vector3d_num_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_2d_debug_str_vector3d_vector3d_num_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+typedef struct vec3 {
+        DWORD x, y, z;
+} vec3;
+
+#pragma pack(push, 1)
+typedef struct add_2d_debug_str {
+        vec3 unk[2];
+        DWORD unk1;
+        const char* name;
+        DWORD unk2;
+} add_2d_debug_str;
+#pragma pack(pop)
+
+
+
+int __fastcall slf_deconstructor_add_3d_debug_str_vector3d_vector3d_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_3d_debug_str_vector3d_vector3d_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_3d_debug_str_vector3d_vector3d_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_3d_debug_str_vector3d_vector3d_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663360;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_civilian_info_vector3d_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_civilian_info_vector3d_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_civilian_info_vector3d_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_civilian_info_vector3d_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680FE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_civilian_info_entity_entity_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_civilian_info_entity_entity_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_civilian_info_entity_entity_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_civilian_info_entity_entity_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006810F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_cyl_vector3d_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_cyl_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_cyl_vector3d_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_cyl_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_cyl_vector3d_vector3d_num_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_cyl_vector3d_vector3d_num_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_cyl_vector3d_vector3d_num_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_cyl_vector3d_vector3d_num_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006633A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_line_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_line_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_line_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_line_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663370;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_line_vector3d_vector3d_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_line_vector3d_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_line_vector3d_vector3d_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_line_vector3d_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663380;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_sphere_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_sphere_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_sphere_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_sphere_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677930;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_debug_sphere_vector3d_num_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_debug_sphere_vector3d_num_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_debug_sphere_vector3d_num_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_debug_sphere_vector3d_num_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663360;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_glass_house_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_glass_house_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006798A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_glass_house_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_glass_house_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_glass_house_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_glass_house_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00661FC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_glass_house_str_num_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_glass_house_str_num_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_glass_house_str_num_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_glass_house_str_num_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662240;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_glass_house_str_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_glass_house_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_glass_house_str_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_glass_house_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662100;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_to_console_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_to_console_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_to_console_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_to_console_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_add_traffic_model_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of add_traffic_model_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_add_traffic_model_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of add_traffic_model_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677770;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_allow_suspend_thread_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of allow_suspend_thread_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_allow_suspend_thread_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of allow_suspend_thread_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006627C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_angle_between_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of angle_between_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_angle_between_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of angle_between_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672070;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_apply_donut_damage_vector3d_num_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of apply_donut_damage_vector3d_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_apply_donut_damage_vector3d_num_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of apply_donut_damage_vector3d_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663460;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_apply_radius_damage_vector3d_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of apply_radius_damage_vector3d_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_apply_radius_damage_vector3d_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of apply_radius_damage_vector3d_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006633E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_apply_radius_subdue_vector3d_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of apply_radius_subdue_vector3d_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_apply_radius_subdue_vector3d_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of apply_radius_subdue_vector3d_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006634E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_assert_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of assert_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_assert_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of assert_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_attach_decal_str_vector3d_num_vector3d_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of attach_decal_str_vector3d_num_vector3d_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_attach_decal_str_vector3d_num_vector3d_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of attach_decal_str_vector3d_num_vector3d_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006643B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_begin_screen_recording_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of begin_screen_recording_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_begin_screen_recording_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of begin_screen_recording_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E740;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_blackscreen_off_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of blackscreen_off_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_blackscreen_off_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of blackscreen_off_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673850;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_blackscreen_on_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of blackscreen_on_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_blackscreen_on_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of blackscreen_on_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673800;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_bring_up_dialog_box_num_num_elip(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of bring_up_dialog_box_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_bring_up_dialog_box_num_num_elip(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of bring_up_dialog_box_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673080;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_bring_up_dialog_box_debug_str_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of bring_up_dialog_box_debug_str_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_bring_up_dialog_box_debug_str_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of bring_up_dialog_box_debug_str_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673490;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_bring_up_dialog_box_title_num_num_num_elip(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of bring_up_dialog_box_title_num_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_bring_up_dialog_box_title_num_num_num_elip(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of bring_up_dialog_box_title_num_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673240;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_bring_up_medal_award_box_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of bring_up_medal_award_box_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_bring_up_medal_award_box_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of bring_up_medal_award_box_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006726E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_bring_up_race_announcer(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of bring_up_race_announcer\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_bring_up_race_announcer(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of bring_up_race_announcer\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006726B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_calc_launch_vector_vector3d_vector3d_num_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of calc_launch_vector_vector3d_vector3d_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_calc_launch_vector_vector3d_vector3d_num_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of calc_launch_vector_vector3d_vector3d_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006641D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_can_load_pack_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of can_load_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_can_load_pack_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of can_load_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680C60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_chase_cam(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of chase_cam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_chase_cam(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of chase_cam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067BBD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_all_grenades(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_all_grenades\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_all_grenades(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_all_grenades\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006640D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_civilians_within_radius_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_civilians_within_radius_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_civilians_within_radius_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_civilians_within_radius_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677930;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_controls(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_controls\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_controls(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_controls\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673B70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_debug_all(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_debug_all\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_debug_all(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_debug_all\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_debug_cyls(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_debug_cyls\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_debug_cyls(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_debug_cyls\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_debug_lines(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_debug_lines\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_debug_lines(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_debug_lines\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_debug_spheres(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_debug_spheres\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_debug_spheres(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_debug_spheres\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_screen(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_screen\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_screen(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_screen\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006640C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_clear_traffic_within_radius_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of clear_traffic_within_radius_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_clear_traffic_within_radius_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of clear_traffic_within_radius_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006778F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_col_check_vector3d_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of col_check_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_col_check_vector3d_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of col_check_vector3d_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663770;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_console_exec_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of console_exec_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_console_exec_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of console_exec_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_copy_vector3d_list_vector3d_list_vector3d_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of copy_vector3d_list_vector3d_list_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_copy_vector3d_list_vector3d_list_vector3d_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of copy_vector3d_list_vector3d_list_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686E00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_cos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of cos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_cos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of cos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663F20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_beam(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_beam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_beam(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_beam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067AD20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_credits(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_credits(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672630;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_cut_scene_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_cut_scene_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_cut_scene_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_cut_scene_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00670AF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_debug_menu_entry_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_debug_menu_entry_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_debug_menu_entry_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_debug_menu_entry_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067C1E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_debug_menu_entry_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_debug_menu_entry_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_debug_menu_entry_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_debug_menu_entry_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678210;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_decal_str_vector3d_num_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_decal_str_vector3d_num_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_decal_str_vector3d_num_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_decal_str_vector3d_num_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664340;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_entity_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_entity_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+
+
+int __fastcall slf_deconstructor_create_entity_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_entity_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_entity_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_entity_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067BD40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_entity_in_hero_region_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_entity_in_hero_region_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_entity_in_hero_region_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_entity_in_hero_region_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067BEC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_entity_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_entity_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_entity_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_entity_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006860D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_entity_tracker_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_entity_tracker_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677650;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_item_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_item_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_item_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_item_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E190;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_line_info_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_line_info_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_line_info_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_line_info_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E440;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_lofi_stereo_sound_inst_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_lofi_stereo_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_lofi_stereo_sound_inst_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_lofi_stereo_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067EBF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_num_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_num_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00685FD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_pfx_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_pfx_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_pfx_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_pfx_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678E20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_pfx_str_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_pfx_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_pfx_str_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_pfx_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678F30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_polytube(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_polytube\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_polytube(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_polytube\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_polytube_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_polytube_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_polytube_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_polytube_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006805E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_progression_menu_entry_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_progression_menu_entry_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_progression_menu_entry_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_progression_menu_entry_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678210;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_sound_inst(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_sound_inst\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_sound_inst(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_sound_inst\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E840;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_sound_inst_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_sound_inst_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E920;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_stompable_music_sound_inst_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_stompable_music_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_stompable_music_sound_inst_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_stompable_music_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067EA10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_str_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_str_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_str_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_str_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686180;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_taunt_entry_entity_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_taunt_entry_entity_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_taunt_entry_entity_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_taunt_entry_entity_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677B80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_taunt_exchange_entity_entity_num_num_num_num_elip(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_taunt_exchange_entity_entity_num_num_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_taunt_exchange_entity_entity_num_num_num_num_elip(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_taunt_exchange_entity_entity_num_num_num_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686330;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_taunt_exchange_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_taunt_exchange_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_taunt_exchange_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_taunt_exchange_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686260;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_threat_assessment_meter(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_threat_assessment_meter\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_threat_assessment_meter(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_threat_assessment_meter\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678030;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_time_limited_entity_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_time_limited_entity_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_time_limited_entity_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_time_limited_entity_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668C60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_trigger_entity_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_trigger_entity_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_trigger_entity_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_trigger_entity_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FC50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_trigger_str_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_trigger_str_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_trigger_str_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_trigger_str_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FB60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_trigger_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_trigger_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_trigger_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_trigger_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FA80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_unstompable_script_cutscene_sound_inst_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_unstompable_script_cutscene_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_unstompable_script_cutscene_sound_inst_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_unstompable_script_cutscene_sound_inst_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067EB00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_create_vector3d_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of create_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_create_vector3d_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of create_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00685F20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_cross_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of cross_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_cross_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of cross_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00671F70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_debug_breakpoint(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of debug_breakpoint\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_debug_breakpoint(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of debug_breakpoint\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_debug_print_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of debug_print_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_debug_print_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of debug_print_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_debug_print_num_vector3d_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of debug_print_num_vector3d_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_debug_print_num_vector3d_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of debug_print_num_vector3d_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00661F50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_debug_print_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of debug_print_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_debug_print_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of debug_print_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_debug_print_set_background_color_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of debug_print_set_background_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_debug_print_set_background_color_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of debug_print_set_background_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00661F60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_delay_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_delay_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        // printf("Calling action of delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663120;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_credits(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_credits(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672650;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_debug_menu_entry_debug_menu_entry(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_debug_menu_entry_debug_menu_entry\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_debug_menu_entry_debug_menu_entry(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_debug_menu_entry_debug_menu_entry\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_entity_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_entity_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_entity_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_entity_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067C010;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_entity_list_entity_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_entity_list_entity_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_entity_list_entity_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_entity_list_entity_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686F10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_entity_tracker_entity_tracker(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_entity_tracker_entity_tracker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_entity_tracker_entity_tracker(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_entity_tracker_entity_tracker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677720;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_line_info_line_info(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_line_info_line_info\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_line_info_line_info(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_line_info_line_info\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006705C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_num_list_num_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_num_list_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_num_list_num_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_num_list_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686080;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_pfx_pfx(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_pfx_pfx\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_pfx_pfx(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_pfx_pfx\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00687870;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_str_list_str_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_str_list_str_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_str_list_str_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_str_list_str_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006878B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_taunt_entry_taunt_entry(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_taunt_entry_taunt_entry\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_taunt_entry_taunt_entry(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_taunt_entry_taunt_entry\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677C70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_taunt_exchange_taunt_exchange(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_taunt_exchange_taunt_exchange\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_taunt_exchange_taunt_exchange(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_taunt_exchange_taunt_exchange\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686B90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_taunt_exchange_list_taunt_exchange_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_taunt_exchange_list_taunt_exchange_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_taunt_exchange_list_taunt_exchange_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_taunt_exchange_list_taunt_exchange_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686B00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_threat_assessment_meter_tam(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_threat_assessment_meter_tam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_threat_assessment_meter_tam(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_threat_assessment_meter_tam\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00678060;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_trigger_trigger(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_trigger_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_trigger_trigger(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_trigger_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FD20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_destroy_vector3d_list_vector3d_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of destroy_vector3d_list_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_destroy_vector3d_list_vector3d_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of destroy_vector3d_list_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686E30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_dilated_delay_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of dilated_delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_dilated_delay_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of dilated_delay_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006631D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_marky_cam_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_marky_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_marky_cam_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_marky_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679A00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_nearby_occlusion_only_obb_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_nearby_occlusion_only_obb_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_nearby_occlusion_only_obb_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_nearby_occlusion_only_obb_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662AA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_player_shadows(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_player_shadows\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_player_shadows(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_player_shadows\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662B10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_subtitles(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_subtitles\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_subtitles(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_subtitles\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006640B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_vibrator(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_vibrator\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_vibrator(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_vibrator\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A600;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_disable_zoom_map_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of disable_zoom_map_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_disable_zoom_map_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of disable_zoom_map_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672BB0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance3d_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance3d_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance3d_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance3d_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672010;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_chase_widget_set_pos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_chase_widget_set_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_chase_widget_set_pos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_chase_widget_set_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006729F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_chase_widget_turn_off(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_chase_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_chase_widget_turn_off(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_chase_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006729D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_chase_widget_turn_on_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_chase_widget_turn_on_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_chase_widget_turn_on_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_chase_widget_turn_on_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672980;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_race_widget_set_boss_pos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_race_widget_set_boss_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_race_widget_set_boss_pos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_race_widget_set_boss_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672A90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_race_widget_set_hero_pos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_race_widget_set_hero_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_race_widget_set_hero_pos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_race_widget_set_hero_pos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672A60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_race_widget_set_types_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_race_widget_set_types_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_race_widget_set_types_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_race_widget_set_types_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672AC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_race_widget_turn_off(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_race_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_race_widget_turn_off(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_race_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672A40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_distance_race_widget_turn_on(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of distance_race_widget_turn_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_distance_race_widget_turn_on(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of distance_race_widget_turn_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672A20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_district_id_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of district_id_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_district_id_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of district_id_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006769B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_district_name_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of district_name_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_district_name_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of district_name_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680F70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_dot_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of dot_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_dot_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of dot_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00671F30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_dump_searchable_region_list_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of dump_searchable_region_list_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_dump_searchable_region_list_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of dump_searchable_region_list_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_ai_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_ai_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_ai_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_ai_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662F90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_civilians_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_civilians_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_civilians_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_civilians_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677940;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_controls_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_controls_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_controls_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_controls_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673AF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_entity_fading_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_entity_fading_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_entity_fading_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_entity_fading_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00669AC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_interface_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_interface_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_interface_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_interface_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662F40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_marky_cam_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_marky_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_marky_cam_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_marky_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006799B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_mini_map_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_mini_map_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_mini_map_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_mini_map_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672B60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_nearby_occlusion_only_obb_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_nearby_occlusion_only_obb_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_nearby_occlusion_only_obb_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_nearby_occlusion_only_obb_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662A70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_obb_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_obb_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_obb_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_obb_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662690;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_pause_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_pause_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_pause_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_pause_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662E50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_physics_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_physics_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_physics_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_physics_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663020;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_player_shadows(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_player_shadows\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_player_shadows(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_player_shadows\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662B20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_pois_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_pois_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_pois_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_pois_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_quad_path_connector_district_num_district_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_quad_path_connector_district_num_district_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_quad_path_connector_district_num_district_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_quad_path_connector_district_num_district_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_subtitles(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_subtitles\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_subtitles(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_subtitles\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006640A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_tokens_of_type_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_tokens_of_type_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_tokens_of_type_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_tokens_of_type_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066F420;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_traffic_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_traffic_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_traffic_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_traffic_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006779C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_user_camera_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_user_camera_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_user_camera_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_user_camera_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662A10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_enable_vibrator(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of enable_vibrator\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_enable_vibrator(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of enable_vibrator\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A620;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_end_current_patrol(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of end_current_patrol\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_end_current_patrol(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of end_current_patrol\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676EC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_end_cut_scenes(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of end_cut_scenes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_end_cut_scenes(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of end_cut_scenes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00670C80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_end_screen_recording(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of end_screen_recording\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_end_screen_recording(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of end_screen_recording\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E7E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_entity_col_check_entity_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of entity_col_check_entity_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_entity_col_check_entity_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of entity_col_check_entity_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006639D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_entity_exists_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of entity_exists_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+
+
+int __fastcall slf_deconstructor_entity_get_entity_tracker_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of entity_get_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_entity_get_entity_tracker_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of entity_get_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006697F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_entity_has_entity_tracker_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of entity_has_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_entity_has_entity_tracker_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of entity_has_entity_tracker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00669790;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_exit_water_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of exit_water_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_exit_water_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of exit_water_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682380;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_closest_point_on_a_path_to_point_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_closest_point_on_a_path_to_point_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_closest_point_on_a_path_to_point_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_closest_point_on_a_path_to_point_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006624B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_district_for_point_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_district_for_point_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_district_for_point_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_district_for_point_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663560;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_entities_in_radius_entity_list_vector3d_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_entities_in_radius_entity_list_vector3d_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_entities_in_radius_entity_list_vector3d_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_entities_in_radius_entity_list_vector3d_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686C60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_entity_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_entity_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_entity_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_entity_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668B90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_innermost_district_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_innermost_district_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_innermost_district_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_innermost_district_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006635A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_outermost_district_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_outermost_district_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_outermost_district_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_outermost_district_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006635E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_trigger_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_trigger_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_trigger_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_trigger_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067F9B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_trigger_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_trigger_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_trigger_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_trigger_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067F900;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_find_trigger_in_district_district_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of find_trigger_in_district_district_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_find_trigger_in_district_district_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of find_trigger_in_district_district_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FA00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_float_random_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of float_random_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_float_random_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of float_random_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663300;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_force_mission_district_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of force_mission_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_force_mission_district_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of force_mission_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006765D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_force_streamer_refresh(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of force_streamer_refresh\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_force_streamer_refresh(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of force_streamer_refresh\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676B70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_format_time_string_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of format_time_string_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_format_time_string_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of format_time_string_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006736A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_freeze_hero_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of freeze_hero_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_freeze_hero_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of freeze_hero_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679A50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_game_ini_get_flag_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of game_ini_get_flag_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_game_ini_get_flag_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of game_ini_get_flag_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067AC20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_game_time_advance_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of game_time_advance_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_game_time_advance_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of game_time_advance_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676D30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_all_execs_thread_count_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_all_execs_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_all_execs_thread_count_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_all_execs_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006824D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_all_instances_thread_count_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_all_instances_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_all_instances_thread_count_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_all_instances_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00681500;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_attacker_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_attacker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_attacker_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_attacker_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006644F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_attacker_member(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_attacker_member\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_attacker_member(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_attacker_member\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006644F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_available_stack_size(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_available_stack_size\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_available_stack_size(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_available_stack_size\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676E30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_character_packname_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_character_packname_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_character_packname_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_character_packname_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676270;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00687180;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_col_hit_ent(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_col_hit_ent\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_col_hit_ent(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_col_hit_ent\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A6E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_col_hit_norm(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_col_hit_norm\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_col_hit_norm(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_col_hit_norm\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663990;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_col_hit_pos(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_col_hit_pos\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_col_hit_pos(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_col_hit_pos\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663950;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_control_state_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_control_state_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_control_state_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_control_state_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A690;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_control_trigger_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_control_trigger_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_control_trigger_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_control_trigger_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A640;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_current_instance_thread_count_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_current_instance_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_current_instance_thread_count_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_current_instance_thread_count_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00681490;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_current_view_cam_pos(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_current_view_cam_pos\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_current_view_cam_pos(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_current_view_cam_pos\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662930;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_current_view_cam_x_facing(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_current_view_cam_x_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_current_view_cam_x_facing(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_current_view_cam_x_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662810;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_current_view_cam_y_facing(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_current_view_cam_y_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_current_view_cam_y_facing(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_current_view_cam_y_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662870;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_current_view_cam_z_facing(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_current_view_cam_z_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_current_view_cam_z_facing(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_current_view_cam_z_facing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006628D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_fog_color(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_fog_color\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_fog_color(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_fog_color\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663E60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_fog_distance(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_fog_distance\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_fog_distance(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_fog_distance\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663EC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_game_info_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_game_info_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_game_info_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_game_info_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663C00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_game_info_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_game_info_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_game_info_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_game_info_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A7F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_glam_cam_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_glam_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_glam_cam_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_glam_cam_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00670930;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_global_time_dilation(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_global_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_global_time_dilation(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_global_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663A60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_ini_flag_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_ini_flag_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_ini_flag_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_ini_flag_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067AC20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_ini_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_ini_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_ini_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_ini_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067AB70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_int_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_int_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_int_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_int_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664060;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_camera_marker_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_camera_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_camera_marker_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_camera_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682F80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_camera_transform_marker_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_camera_transform_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_camera_transform_marker_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_camera_transform_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00683040;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006764E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_key_posfacing3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_key_posfacing3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_key_posfacing3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_key_posfacing3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676330;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_key_position(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_key_position\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_key_position(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_key_position\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006762E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_marker_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_marker_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682F10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_nums(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_nums\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_nums(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_nums\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006765A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_patrol_waypoint(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_patrol_waypoint\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_patrol_waypoint(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_patrol_waypoint\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006764A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_positions(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_positions\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_positions(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_positions\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676540;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_strings(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_strings\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_strings(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_strings\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676570;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_transform_marker_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_transform_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_transform_marker_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_transform_marker_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682FE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_mission_trigger(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_mission_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_mission_trigger(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_mission_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_missions_key_position_by_index_district_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_missions_key_position_by_index_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_missions_key_position_by_index_district_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_missions_key_position_by_index_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676620;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_missions_nums_by_index_district_str_num_num_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_missions_nums_by_index_district_str_num_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_missions_nums_by_index_district_str_num_num_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_missions_nums_by_index_district_str_num_num_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682EB0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_missions_patrol_waypoint_by_index_district_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_missions_patrol_waypoint_by_index_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_missions_patrol_waypoint_by_index_district_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_missions_patrol_waypoint_by_index_district_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006766A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_neighborhood_name_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_neighborhood_name_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_neighborhood_name_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_neighborhood_name_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677220;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_num_free_slots_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_num_free_slots_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_num_free_slots_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_num_free_slots_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676720;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_num_mission_transform_marker(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_num_mission_transform_marker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_num_mission_transform_marker(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_num_mission_transform_marker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680F10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_pack_group_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_pack_group_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_pack_group_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_pack_group_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680B80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_pack_size_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_pack_size_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_pack_size_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_pack_size_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676D70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_patrol_difficulty_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_patrol_difficulty_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_patrol_difficulty_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_patrol_difficulty_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677100;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_patrol_node_position_by_index_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_patrol_node_position_by_index_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_patrol_node_position_by_index_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_patrol_node_position_by_index_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677080;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_patrol_start_position_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_patrol_start_position_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_patrol_start_position_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_patrol_start_position_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677010;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_patrol_unlock_threshold_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_patrol_unlock_threshold_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_patrol_unlock_threshold_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_patrol_unlock_threshold_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677160;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_platform(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_platform\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_platform(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_platform\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00661F20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_render_opt_num_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_render_opt_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_render_opt_num_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_render_opt_num_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663DD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_spider_reflexes_spiderman_time_dilation(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_spider_reflexes_spiderman_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_spider_reflexes_spiderman_time_dilation(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_spider_reflexes_spiderman_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_spider_reflexes_world_time_dilation(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_spider_reflexes_world_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_spider_reflexes_world_time_dilation(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_spider_reflexes_world_time_dilation\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_time_inc(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_time_inc\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_time_inc(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_time_inc\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006633B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_time_of_day(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_time_of_day\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_time_of_day(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_time_of_day\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664150;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_time_of_day_rate(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_time_of_day_rate\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_time_of_day_rate(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_time_of_day_rate\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664110;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_token_index_from_id_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_token_index_from_id_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_token_index_from_id_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_token_index_from_id_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066F470;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_get_traffic_spawn_point_near_camera_vector3d_list(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of get_traffic_spawn_point_near_camera_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_get_traffic_spawn_point_near_camera_vector3d_list(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of get_traffic_spawn_point_near_camera_vector3d_list\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00686BE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_greater_than_or_equal_rounded_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of greater_than_or_equal_rounded_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_greater_than_or_equal_rounded_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of greater_than_or_equal_rounded_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673750;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_hard_break(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of hard_break\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_hard_break(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of hard_break\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_has_substring_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of has_substring_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_has_substring_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of has_substring_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006625D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_hero(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of hero\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_hero(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of hero\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067BBA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_hero_exists(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of hero_exists\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_hero_exists(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of hero_exists\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668A10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_hero_type(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of hero_type\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_hero_type(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of hero_type\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668A50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_hide_controller_gauge(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of hide_controller_gauge\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_hide_controller_gauge(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of hide_controller_gauge\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672750;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_initialize_encounter_object(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of initialize_encounter_object\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_initialize_encounter_object(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of initialize_encounter_object\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664490;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_initialize_encounter_objects(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of initialize_encounter_objects\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_initialize_encounter_objects(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of initialize_encounter_objects\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664430;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_insert_pack_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of insert_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_insert_pack_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of insert_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006809A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_invoke_pause_menu_unlockables(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of invoke_pause_menu_unlockables\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_invoke_pause_menu_unlockables(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of invoke_pause_menu_unlockables\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006737C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_ai_enabled(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_ai_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_ai_enabled(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_ai_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662FE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_cut_scene_playing(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_cut_scene_playing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_cut_scene_playing(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_cut_scene_playing\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00670CA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_district_loaded_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_district_loaded_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_district_loaded_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_district_loaded_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676AB0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_hero_frozen(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_hero_frozen\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_hero_frozen(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_hero_frozen\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679AA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_hero_peter_parker(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_hero_peter_parker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_hero_peter_parker(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_hero_peter_parker\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668B40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_hero_spidey(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_hero_spidey\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_hero_spidey(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_hero_spidey\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668AA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_hero_venom(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_hero_venom\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_hero_venom(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_hero_venom\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00668AF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_marky_cam_enabled(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_marky_cam_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_marky_cam_enabled(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_marky_cam_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662990;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_mission_active(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_mission_active\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_mission_active(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_mission_active\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676F20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_mission_loading(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_mission_loading\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_mission_loading(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_mission_loading\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676F60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_pack_available_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_pack_available_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_pack_available_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_pack_available_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680E40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_pack_loaded_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_pack_loaded_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_pack_loaded_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_pack_loaded_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680D50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_pack_pushed_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_pack_pushed_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_pack_pushed_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_pack_pushed_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676190;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_path_graph_inside_glass_house_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_path_graph_inside_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_path_graph_inside_glass_house_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_path_graph_inside_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664590;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_patrol_active(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_patrol_active\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_patrol_active(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_patrol_active\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676EE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_patrol_node_empty_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_patrol_node_empty_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_patrol_node_empty_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_patrol_node_empty_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006771C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_paused(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_paused\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_paused(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_paused\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662EA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_physics_enabled(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_physics_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_physics_enabled(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_physics_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663070;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_point_inside_glass_house_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_point_inside_glass_house_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_point_inside_glass_house_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_point_inside_glass_house_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00661F70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_point_under_water_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_point_under_water_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_point_under_water_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_point_under_water_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664540;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_is_user_camera_enabled(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of is_user_camera_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_is_user_camera_enabled(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of is_user_camera_enabled\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006629D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_load_anim_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of load_anim_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_load_anim_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of load_anim_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_load_level_str_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of load_level_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_load_level_str_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of load_level_str_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663AD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_lock_all_districts(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of lock_all_districts\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_lock_all_districts(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of lock_all_districts\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676C10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_lock_district_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of lock_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_lock_district_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of lock_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676A70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_lock_mission_manager_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of lock_mission_manager_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_lock_mission_manager_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of lock_mission_manager_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676FA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_los_check_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of los_check_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_los_check_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of los_check_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006813E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_lower_hotpursuit_indicator_level(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of lower_hotpursuit_indicator_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_lower_hotpursuit_indicator_level(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of lower_hotpursuit_indicator_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672610;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_malor_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of malor_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_malor_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of malor_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664180;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_normal_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of normal_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_normal_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of normal_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00671FD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_pause_game_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of pause_game_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_pause_game_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of pause_game_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662EE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_play_credits(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of play_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_play_credits(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of play_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672670;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_play_prerender_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of play_prerender_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_play_prerender_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of play_prerender_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663B60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_pop_pack_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of pop_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_pop_pack_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of pop_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680870;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_post_message_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of post_message_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_post_message_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of post_message_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A460;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_pre_roll_all_pfx_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of pre_roll_all_pfx_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_pre_roll_all_pfx_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of pre_roll_all_pfx_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_press_controller_gauge_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of press_controller_gauge_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_press_controller_gauge_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of press_controller_gauge_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672770;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_press_controller_gauge_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of press_controller_gauge_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_press_controller_gauge_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of press_controller_gauge_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006727A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_purge_district_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of purge_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_purge_district_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of purge_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676BD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_push_pack_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of push_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_push_pack_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of push_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680730;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_push_pack_into_district_slot_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of push_pack_into_district_slot_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_push_pack_into_district_slot_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of push_pack_into_district_slot_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00682B80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_raise_hotpursuit_indicator_level(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of raise_hotpursuit_indicator_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_raise_hotpursuit_indicator_level(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of raise_hotpursuit_indicator_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006725F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_random_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of random_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_random_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of random_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663280;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_civilian_info_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_civilian_info_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_civilian_info_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_civilian_info_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677870;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_civilian_info_entity_entity_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_civilian_info_entity_entity_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_civilian_info_entity_entity_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_civilian_info_entity_entity_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00681240;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_glass_house_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_glass_house_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_glass_house_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006623A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_item_entity_from_world_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_item_entity_from_world_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_item_entity_from_world_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_item_entity_from_world_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00669500;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_pack_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_pack_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_pack_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680A90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_remove_traffic_model_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of remove_traffic_model_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_remove_traffic_model_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of remove_traffic_model_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677810;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_reset_externed_alses(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of reset_externed_alses\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_reset_externed_alses(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of reset_externed_alses\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00669B00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_all_anchors_activated_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_all_anchors_activated_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_all_anchors_activated_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_all_anchors_activated_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006830A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662B90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_blend_mode_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_blend_mode_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_blend_mode_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_blend_mode_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662CC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_color_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_color_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662BC0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_offset_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_offset_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_offset_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_offset_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662C50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_rot_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_rot_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_rot_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_rot_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662C90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_blur_scale_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_blur_scale_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_blur_scale_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_blur_scale_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662C10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_clear_color_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_clear_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_clear_color_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_clear_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006630B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_current_mission_objective_caption_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_current_mission_objective_caption_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_current_mission_objective_caption_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_current_mission_objective_caption_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679570;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_default_traffic_hitpoints_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_default_traffic_hitpoints_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_default_traffic_hitpoints_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_default_traffic_hitpoints_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677A70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_dialog_box_flavor_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_dialog_box_flavor_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_dialog_box_flavor_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_dialog_box_flavor_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673600;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_dialog_box_lockout_time_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_dialog_box_lockout_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_dialog_box_lockout_time_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_dialog_box_lockout_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673670;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_engine_property_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_engine_property_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_engine_property_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_engine_property_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006642A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_fov_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_fov_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_fov_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_fov_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662B60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_game_info_num_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_game_info_num_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_game_info_num_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_game_info_num_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663B90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_game_info_str_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_game_info_str_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_game_info_str_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_game_info_str_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663C90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_global_time_dilation_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_global_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_global_time_dilation_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_global_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663A90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_marky_cam_lookat_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_marky_cam_lookat_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_marky_cam_lookat_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_marky_cam_lookat_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662AD0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_max_streaming_distance_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_max_streaming_distance_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_max_streaming_distance_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_max_streaming_distance_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676B90;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_mission_key_pos_facing_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_mission_key_pos_facing_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_mission_key_pos_facing_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_mission_key_pos_facing_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676430;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_mission_key_position_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_mission_key_position_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_mission_key_position_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_mission_key_position_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_mission_text_num_elip(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_mission_text_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_mission_text_num_elip(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_mission_text_num_elip\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672C00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_mission_text_box_flavor_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_mission_text_box_flavor_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_mission_text_box_flavor_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_mission_text_box_flavor_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673640;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_mission_text_debug_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_mission_text_debug_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_mission_text_debug_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_mission_text_debug_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672FA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_parking_density_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_parking_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_parking_density_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_parking_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677A40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_pedestrian_density_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_pedestrian_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_pedestrian_density_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_pedestrian_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677990;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_render_opt_num_str_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_render_opt_num_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_render_opt_num_str_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_render_opt_num_str_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663D60;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_score_widget_score_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_score_widget_score_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_score_widget_score_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_score_widget_score_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672570;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_sound_category_volume_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_sound_category_volume_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_sound_category_volume_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_sound_category_volume_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664300;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662CF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_blend_mode_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_blend_mode_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_blend_mode_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_blend_mode_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662E20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_color_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_color_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_color_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662D20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_offset_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_offset_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_offset_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_offset_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662DB0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_rot_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_rot_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_rot_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_rot_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662DF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_blur_scale_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_blur_scale_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_blur_scale_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_blur_scale_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662D70;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_hero_meter_depletion_rate_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_hero_meter_depletion_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_hero_meter_depletion_rate_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_hero_meter_depletion_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_spiderman_time_dilation_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_spiderman_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_spiderman_time_dilation_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_spiderman_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_spider_reflexes_world_time_dilation_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_spider_reflexes_world_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_spider_reflexes_world_time_dilation_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_spider_reflexes_world_time_dilation_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_state_of_the_story_caption_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_state_of_the_story_caption_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_state_of_the_story_caption_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_state_of_the_story_caption_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679570;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_target_info_entity_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_target_info_entity_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_target_info_entity_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_target_info_entity_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067E3C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_time_of_day_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_time_of_day_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_time_of_day_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_time_of_day_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006640E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_traffic_density_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_traffic_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_traffic_density_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_traffic_density_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677A10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_traffic_model_usage_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_traffic_model_usage_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_traffic_model_usage_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_traffic_model_usage_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00677840;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_vibration_resume_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_vibration_resume_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_vibration_resume_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_vibration_resume_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A5B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_whoosh_interp_rate_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_whoosh_interp_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_whoosh_interp_rate_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_whoosh_interp_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EBE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_whoosh_pitch_range_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_whoosh_pitch_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_whoosh_pitch_range_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_whoosh_pitch_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EBB0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_whoosh_speed_range_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_whoosh_speed_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_whoosh_speed_range_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_whoosh_speed_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EB50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_whoosh_volume_range_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_whoosh_volume_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_whoosh_volume_range_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_whoosh_volume_range_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EB80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_set_zoom_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of set_zoom_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_set_zoom_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of set_zoom_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00662B30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_show_controller_gauge(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of show_controller_gauge\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_show_controller_gauge(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of show_controller_gauge\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672730;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_show_hotpursuit_indicator_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of show_hotpursuit_indicator_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_show_hotpursuit_indicator_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of show_hotpursuit_indicator_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006725A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_show_score_widget_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of show_score_widget_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_show_score_widget_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of show_score_widget_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672520;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_shut_up_all_ai_voice_boxes(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of shut_up_all_ai_voice_boxes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_shut_up_all_ai_voice_boxes(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of shut_up_all_ai_voice_boxes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EC10;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_sin_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of sin_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_sin_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of sin_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663EF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_sin_cos_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of sin_cos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_sin_cos_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of sin_cos_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00664000;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_soft_load_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of soft_load_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_soft_load_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of soft_load_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006738C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_soft_save_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of soft_save_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_soft_save_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of soft_save_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673880;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_add_hero_points_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_add_hero_points_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_add_hero_points_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_add_hero_points_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_bank_stylepoints(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_bank_stylepoints\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_bank_stylepoints(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_bank_stylepoints\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_break_web(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_break_web\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_break_web(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_break_web\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_add_shake_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_add_shake_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_add_shake_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_add_shake_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006796F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_autocorrect_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_autocorrect_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_autocorrect_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_autocorrect_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679000;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_clear_fixedstatic(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_clear_fixedstatic\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_clear_fixedstatic(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_clear_fixedstatic\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006795D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_enable_combat_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_enable_combat_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_enable_combat_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_enable_combat_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679640;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_enable_lookaround_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_enable_lookaround_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_enable_lookaround_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_enable_lookaround_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006795F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_fixedstatic_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_fixedstatic_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_fixedstatic_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_fixedstatic_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006795A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_follow_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_follow_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_follow_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_follow_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006796A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_hero_underwater_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_hero_underwater_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_hero_underwater_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_hero_underwater_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679760;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_interpolation_time_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_interpolation_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_interpolation_time_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_interpolation_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_lockon_min_distance_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_lockon_min_distance_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_lockon_min_distance_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_lockon_min_distance_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_camera_set_lockon_y_offset_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_camera_set_lockon_y_offset_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_camera_set_lockon_y_offset_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_camera_set_lockon_y_offset_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_charged_jump(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_charged_jump\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_charged_jump(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_charged_jump\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_enable_control_button_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_enable_control_button_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_enable_control_button_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_enable_control_button_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_enable_lockon_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_enable_lockon_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_enable_lockon_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_enable_lockon_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_engage_lockon_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_engage_lockon_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_engage_lockon_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_engage_lockon_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_engage_lockon_num_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_engage_lockon_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_engage_lockon_num_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_engage_lockon_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679430;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_get_hero_points(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_get_hero_points\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_get_hero_points(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_get_hero_points\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794E0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_get_max_zip_length(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_get_max_zip_length\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_get_max_zip_length(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_get_max_zip_length\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_get_spidey_sense_level(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_get_spidey_sense_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_get_spidey_sense_level(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_get_spidey_sense_level\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679400;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_crawling(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_crawling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_crawling(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_crawling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679160;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_falling(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_falling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_falling(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_falling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006792F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_jumping(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_jumping\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_jumping(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_jumping\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006792F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_on_ceiling(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_on_ceiling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_on_ceiling(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_on_ceiling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679200;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_on_ground(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_on_ground\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_on_ground(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_on_ground\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006792A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_on_wall(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_on_wall\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_on_wall(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_on_wall\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006791B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_running(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_running\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_running(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_running\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006792A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_sprint_crawling(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_sprint_crawling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_sprint_crawling(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_sprint_crawling\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_sprinting(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_sprinting\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_sprinting(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_sprinting\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006792F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_swinging(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_swinging\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_swinging(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_swinging\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679250;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_is_wallsprinting(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_is_wallsprinting\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_is_wallsprinting(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_is_wallsprinting\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679340;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_lock_spider_reflexes_off(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_lock_spider_reflexes_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_lock_spider_reflexes_off(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_lock_spider_reflexes_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_lock_spider_reflexes_on(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_lock_spider_reflexes_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_lock_spider_reflexes_on(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_lock_spider_reflexes_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_lockon_camera_engaged(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_lockon_camera_engaged\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_lockon_camera_engaged(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_lockon_camera_engaged\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_lockon_mode_engaged(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_lockon_mode_engaged\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_lockon_mode_engaged(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_lockon_mode_engaged\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_camera_target_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_camera_target_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_camera_target_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_camera_target_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679460;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_desired_mode_num_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_desired_mode_num_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_desired_mode_num_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_desired_mode_num_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663390;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_health_beep_min_max_cooldown_time_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_health_beep_min_max_cooldown_time_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_health_beep_min_max_cooldown_time_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_health_beep_min_max_cooldown_time_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_health_beep_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_health_beep_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_health_beep_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_health_beep_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_hero_meter_empty_rate_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_hero_meter_empty_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_hero_meter_empty_rate_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_hero_meter_empty_rate_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_max_height_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_max_height_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_max_height_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_max_height_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_max_zip_length_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_max_zip_length_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_max_zip_length_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_max_zip_length_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_min_height_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_min_height_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_min_height_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_min_height_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_spidey_sense_level_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_spidey_sense_level_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_spidey_sense_level_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_spidey_sense_level_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006793C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_set_swing_anchor_max_sticky_time_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_set_swing_anchor_max_sticky_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_set_swing_anchor_max_sticky_time_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_set_swing_anchor_max_sticky_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_subtract_hero_points_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_subtract_hero_points_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_subtract_hero_points_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_subtract_hero_points_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679540;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_alternating_wall_run_occurrence_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_alternating_wall_run_occurrence_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_alternating_wall_run_occurrence_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_alternating_wall_run_occurrence_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_alternating_wall_run_time_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_alternating_wall_run_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_alternating_wall_run_time_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_alternating_wall_run_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_big_air_height_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_big_air_height_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_big_air_height_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_big_air_height_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_continuous_air_swings_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_continuous_air_swings_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_continuous_air_swings_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_continuous_air_swings_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_gain_altitude_height_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_gain_altitude_height_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_gain_altitude_height_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_gain_altitude_height_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_near_miss_trigger_radius_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_near_miss_trigger_radius_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_near_miss_trigger_radius_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_near_miss_trigger_radius_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_near_miss_velocity_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_near_miss_velocity_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_near_miss_velocity_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_near_miss_velocity_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_orbit_min_radius_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_orbit_min_radius_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_orbit_min_radius_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_orbit_min_radius_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_soft_landing_velocity_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_soft_landing_velocity_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_soft_landing_velocity_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_soft_landing_velocity_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_super_speed_speed_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_super_speed_speed_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_super_speed_speed_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_super_speed_speed_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_swinging_wall_run_time_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_swinging_wall_run_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_swinging_wall_run_time_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_swinging_wall_run_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_td_set_wall_sprint_time_threshold_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_td_set_wall_sprint_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_td_set_wall_sprint_time_threshold_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_td_set_wall_sprint_time_threshold_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_unlock_spider_reflexes(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_unlock_spider_reflexes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_unlock_spider_reflexes(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_unlock_spider_reflexes\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spiderman_wait_add_threat_entity_str_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spiderman_wait_add_threat_entity_str_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spiderman_wait_add_threat_entity_str_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spiderman_wait_add_threat_entity_str_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006797C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_spidey_can_see_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of spidey_can_see_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_spidey_can_see_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of spidey_can_see_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679030;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_sqrt_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of sqrt_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_sqrt_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of sqrt_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663F50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_start_patrol_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of start_patrol_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_start_patrol_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of start_patrol_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676E80;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_stop_all_sounds(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of stop_all_sounds\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_stop_all_sounds(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of stop_all_sounds\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0066EC20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_stop_credits(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of stop_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_stop_credits(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of stop_credits\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672690;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_stop_vibration(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of stop_vibration\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_stop_vibration(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of stop_vibration\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A590;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_subtitle_num_num_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of subtitle_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_subtitle_num_num_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of subtitle_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673900;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_swap_hero_costume_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of swap_hero_costume_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_swap_hero_costume_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of swap_hero_costume_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676C50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_text_width_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of text_width_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_text_width_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of text_width_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_get_count_up(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_get_count_up\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_get_count_up(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_get_count_up\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672940;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_get_time(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_get_time\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_get_time(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_get_time\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006728C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_set_count_up_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_set_count_up_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_set_count_up_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_set_count_up_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006728F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_set_time_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_set_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_set_time_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_set_time_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672890;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_start(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_start\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_start(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_start\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672850;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_stop(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_stop\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_stop(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_stop\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672870;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_turn_off(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_turn_off(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_turn_off\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672830;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_timer_widget_turn_on(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of timer_widget_turn_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_timer_widget_turn_on(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of timer_widget_turn_on\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672810;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_to_beam_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of to_beam_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_to_beam_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of to_beam_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067AE20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_to_gun_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of to_gun_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_to_gun_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of to_gun_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00681950;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_to_item_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of to_item_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_to_item_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of to_item_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006819B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_to_polytube_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of to_polytube_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_to_polytube_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of to_polytube_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006806D0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_to_switch_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of to_switch_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_to_switch_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of to_switch_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067F7F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_trace_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of trace_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_trace_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of trace_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006794C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_trigger_is_valid_trigger(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of trigger_is_valid_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_trigger_is_valid_trigger(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of trigger_is_valid_trigger\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00671900;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_off_boss_health(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_off_boss_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_off_boss_health(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_off_boss_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672B00;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_off_hero_health(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_off_hero_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_off_hero_health(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_off_hero_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672B20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_off_mission_text(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_off_mission_text\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_off_mission_text(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_off_mission_text\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00673060;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_off_third_party_health(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_off_third_party_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_off_third_party_health(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_off_third_party_health\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00672B40;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_on_boss_health_num_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_on_boss_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_on_boss_health_num_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_on_boss_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067FFF0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_on_hero_health_num_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_on_hero_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_on_hero_health_num_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_on_hero_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680040;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_turn_on_third_party_health_num_entity(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of turn_on_third_party_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_turn_on_third_party_health_num_entity(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of turn_on_third_party_health_num_entity\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00680090;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_unload_script(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of unload_script\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_unload_script(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of unload_script\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x006762B0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_unlock_all_exterior_districts(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of unlock_all_exterior_districts\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_unlock_all_exterior_districts(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of unlock_all_exterior_districts\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676C30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_unlock_district_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of unlock_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_unlock_district_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of unlock_district_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676A30;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_vibrate_controller_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of vibrate_controller_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_vibrate_controller_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of vibrate_controller_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A550;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_vibrate_controller_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of vibrate_controller_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_vibrate_controller_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of vibrate_controller_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A510;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_vibrate_controller_num_num_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of vibrate_controller_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_vibrate_controller_num_num_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of vibrate_controller_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A4C0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_vo_delay_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of vo_delay_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_vo_delay_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of vo_delay_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663230;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_animate_fog_color_vector3d_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_animate_fog_color_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_animate_fog_color_vector3d_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_animate_fog_color_vector3d_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A100;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_animate_fog_distance_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_animate_fog_distance_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_animate_fog_distance_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_animate_fog_distance_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A2A0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_animate_fog_distances_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_animate_fog_distances_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_animate_fog_distances_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_animate_fog_distances_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A370;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_change_blur_num_vector3d_num_num_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_change_blur_num_vector3d_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_change_blur_num_vector3d_num_num_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_change_blur_num_vector3d_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679BA0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_change_spider_reflexes_blur_num_vector3d_num_num_num_num_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_change_spider_reflexes_blur_num_vector3d_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_change_spider_reflexes_blur_num_vector3d_num_num_num_num_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_change_spider_reflexes_blur_num_vector3d_num_num_num_num_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679E50;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_for_streamer_to_reach_equilibrium(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_for_streamer_to_reach_equilibrium\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_for_streamer_to_reach_equilibrium(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_for_streamer_to_reach_equilibrium\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00676B20;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_fps_test_num_num_vector3d_vector3d(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_fps_test_num_num_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_fps_test_num_num_vector3d_vector3d(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_fps_test_num_num_vector3d_vector3d\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A8F0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_frame(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_frame\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_frame(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        // printf("Calling action of wait_frame\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663110;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_set_global_time_dilation_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_set_global_time_dilation_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_set_global_time_dilation_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_set_global_time_dilation_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067A710;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_wait_set_zoom_num_num(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of wait_set_zoom_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_wait_set_zoom_num_num(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of wait_set_zoom_num_num\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00679AE0;
+        return original(_this, edx, arg, arg1);
+}
+
+int __fastcall slf_deconstructor_write_to_file_str_str(void* _this, void* edx, void* arg)
+{
+
+        printf("Calling deconstructor of write_to_file_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*);
+        original_ptr original = (original_ptr)0x0067ADE0;
+        return original(_this, edx, arg);
+}
+
+int __fastcall slf_action_write_to_file_str_str(void* _this, void* edx, void* arg, void* arg1)
+{
+
+        printf("Calling action of write_to_file_str_str\n");
+
+        typedef int(__fastcall * original_ptr)(void*, void*, void*, void*);
+        original_ptr original = (original_ptr)0x00663620;
+        return original(_this, edx, arg, arg1);
+}
+
+
+
+
+
+void hook_slf_vtables()
+{
+
+        
+
+
+        
+    hook_slf_vtable(slf_deconstructor_abs_delay_num, slf_action_abs_delay_num, static_cast<DWORD*>((void*)0x89a724));
+    hook_slf_vtable(slf_deconstructor_acos_num, slf_action_acos_num, static_cast<DWORD*>((void*)0x89a91c));
+    hook_slf_vtable(slf_deconstructor_add_2d_debug_str_vector3d_vector3d_num_str, slf_action_add_2d_debug_str_vector3d_vector3d_num_str, static_cast<DWORD*>((void*)0x89a860));
+    hook_slf_vtable(slf_deconstructor_add_3d_debug_str_vector3d_vector3d_num_str, slf_action_add_3d_debug_str_vector3d_vector3d_num_str, static_cast<DWORD*>((void*)0x89a850));
+    hook_slf_vtable(slf_deconstructor_add_civilian_info_vector3d_num_num_num, slf_action_add_civilian_info_vector3d_num_num_num, static_cast<DWORD*>((void*)0x89c5bc));
+    hook_slf_vtable(slf_deconstructor_add_civilian_info_entity_entity_num_num_num, slf_action_add_civilian_info_entity_entity_num_num_num, static_cast<DWORD*>((void*)0x89c5cc));
+    hook_slf_vtable(slf_deconstructor_add_debug_cyl_vector3d_vector3d_num, slf_action_add_debug_cyl_vector3d_vector3d_num, static_cast<DWORD*>((void*)0x89a774));
+    hook_slf_vtable(slf_deconstructor_add_debug_cyl_vector3d_vector3d_num_vector3d_num, slf_action_add_debug_cyl_vector3d_vector3d_num_vector3d_num, static_cast<DWORD*>((void*)0x89a77c));
+    hook_slf_vtable(slf_deconstructor_add_debug_line_vector3d_vector3d, slf_action_add_debug_line_vector3d_vector3d, static_cast<DWORD*>((void*)0x89a764));
+    hook_slf_vtable(slf_deconstructor_add_debug_line_vector3d_vector3d_vector3d_num, slf_action_add_debug_line_vector3d_vector3d_vector3d_num, static_cast<DWORD*>((void*)0x89a76c));
+    hook_slf_vtable(slf_deconstructor_add_debug_sphere_vector3d_num, slf_action_add_debug_sphere_vector3d_num, static_cast<DWORD*>((void*)0x89a754));
+    hook_slf_vtable(slf_deconstructor_add_debug_sphere_vector3d_num_vector3d_num, slf_action_add_debug_sphere_vector3d_num_vector3d_num, static_cast<DWORD*>((void*)0x89a75c));
+    hook_slf_vtable(slf_deconstructor_add_glass_house_str, slf_action_add_glass_house_str, static_cast<DWORD*>((void*)0x89a548));
+    hook_slf_vtable(slf_deconstructor_add_glass_house_str_num, slf_action_add_glass_house_str_num, static_cast<DWORD*>((void*)0x89a550));
+    hook_slf_vtable(slf_deconstructor_add_glass_house_str_num_vector3d, slf_action_add_glass_house_str_num_vector3d, static_cast<DWORD*>((void*)0x89a560));
+    hook_slf_vtable(slf_deconstructor_add_glass_house_str_vector3d, slf_action_add_glass_house_str_vector3d, static_cast<DWORD*>((void*)0x89a558));
+    hook_slf_vtable(slf_deconstructor_add_to_console_str, slf_action_add_to_console_str, static_cast<DWORD*>((void*)0x89a834));
+    hook_slf_vtable(slf_deconstructor_add_traffic_model_num_str, slf_action_add_traffic_model_num_str, static_cast<DWORD*>((void*)0x89c5a4));
+    hook_slf_vtable(slf_deconstructor_allow_suspend_thread_num, slf_action_allow_suspend_thread_num, static_cast<DWORD*>((void*)0x89a594));
+    hook_slf_vtable(slf_deconstructor_angle_between_vector3d_vector3d, slf_action_angle_between_vector3d_vector3d, static_cast<DWORD*>((void*)0x89ba50));
+    hook_slf_vtable(slf_deconstructor_apply_donut_damage_vector3d_num_num_num_num_num, slf_action_apply_donut_damage_vector3d_num_num_num_num_num, static_cast<DWORD*>((void*)0x89a804));
+    hook_slf_vtable(slf_deconstructor_apply_radius_damage_vector3d_num_num_num_num, slf_action_apply_radius_damage_vector3d_num_num_num_num, static_cast<DWORD*>((void*)0x89a7fc));
+    hook_slf_vtable(slf_deconstructor_apply_radius_subdue_vector3d_num_num_num_num, slf_action_apply_radius_subdue_vector3d_num_num_num_num, static_cast<DWORD*>((void*)0x89a80c));
+    hook_slf_vtable(slf_deconstructor_assert_num_str, slf_action_assert_num_str, static_cast<DWORD*>((void*)0x89a518));
+    hook_slf_vtable(slf_deconstructor_attach_decal_str_vector3d_num_vector3d_entity, slf_action_attach_decal_str_vector3d_num_vector3d_entity, static_cast<DWORD*>((void*)0x89a9fc));
+    hook_slf_vtable(slf_deconstructor_begin_screen_recording_str_num, slf_action_begin_screen_recording_str_num, static_cast<DWORD*>((void*)0x89b7b0));
+    hook_slf_vtable(slf_deconstructor_blackscreen_off_num, slf_action_blackscreen_off_num, static_cast<DWORD*>((void*)0x89bcac));
+    hook_slf_vtable(slf_deconstructor_blackscreen_on_num, slf_action_blackscreen_on_num, static_cast<DWORD*>((void*)0x89bca0));
+    hook_slf_vtable(slf_deconstructor_bring_up_dialog_box_num_num_elip, slf_action_bring_up_dialog_box_num_num_elip, static_cast<DWORD*>((void*)0x89bc28));
+    hook_slf_vtable(slf_deconstructor_bring_up_dialog_box_debug_str_num_str, slf_action_bring_up_dialog_box_debug_str_num_str, static_cast<DWORD*>((void*)0x89bc38));
+    hook_slf_vtable(slf_deconstructor_bring_up_dialog_box_title_num_num_num_elip, slf_action_bring_up_dialog_box_title_num_num_num_elip, static_cast<DWORD*>((void*)0x89bc30));
+    hook_slf_vtable(slf_deconstructor_bring_up_medal_award_box_num, slf_action_bring_up_medal_award_box_num, static_cast<DWORD*>((void*)0x89bb10));
+    hook_slf_vtable(slf_deconstructor_bring_up_race_announcer, slf_action_bring_up_race_announcer, static_cast<DWORD*>((void*)0x89bb08));
+    hook_slf_vtable(slf_deconstructor_calc_launch_vector_vector3d_vector3d_num_entity, slf_action_calc_launch_vector_vector3d_vector3d_num_entity, static_cast<DWORD*>((void*)0x89a98c));
+    hook_slf_vtable(slf_deconstructor_can_load_pack_str, slf_action_can_load_pack_str, static_cast<DWORD*>((void*)0x89c3f4));
+    hook_slf_vtable(slf_deconstructor_chase_cam, slf_action_chase_cam, static_cast<DWORD*>((void*)0x89af04));
+    hook_slf_vtable(slf_deconstructor_clear_all_grenades, slf_action_clear_all_grenades, static_cast<DWORD*>((void*)0x89a95c));
+    hook_slf_vtable(slf_deconstructor_clear_civilians_within_radius_vector3d_num, slf_action_clear_civilians_within_radius_vector3d_num, static_cast<DWORD*>((void*)0x89c5e4));
+    hook_slf_vtable(slf_deconstructor_clear_controls, slf_action_clear_controls, static_cast<DWORD*>((void*)0x89bd48));
+    hook_slf_vtable(slf_deconstructor_clear_debug_all, slf_action_clear_debug_all, static_cast<DWORD*>((void*)0x89a79c));
+    hook_slf_vtable(slf_deconstructor_clear_debug_cyls, slf_action_clear_debug_cyls, static_cast<DWORD*>((void*)0x89a794));
+    hook_slf_vtable(slf_deconstructor_clear_debug_lines, slf_action_clear_debug_lines, static_cast<DWORD*>((void*)0x89a78c));
+    hook_slf_vtable(slf_deconstructor_clear_debug_spheres, slf_action_clear_debug_spheres, static_cast<DWORD*>((void*)0x89a784));
+    hook_slf_vtable(slf_deconstructor_clear_screen, slf_action_clear_screen, static_cast<DWORD*>((void*)0x89a944));
+    hook_slf_vtable(slf_deconstructor_clear_traffic_within_radius_vector3d_num, slf_action_clear_traffic_within_radius_vector3d_num, static_cast<DWORD*>((void*)0x89c5dc));
+    hook_slf_vtable(slf_deconstructor_col_check_vector3d_vector3d_num, slf_action_col_check_vector3d_vector3d_num, static_cast<DWORD*>((void*)0x89a868));
+    hook_slf_vtable(slf_deconstructor_console_exec_str, slf_action_console_exec_str, static_cast<DWORD*>((void*)0x89a83c));
+    hook_slf_vtable(slf_deconstructor_copy_vector3d_list_vector3d_list_vector3d_list, slf_action_copy_vector3d_list_vector3d_list_vector3d_list, static_cast<DWORD*>((void*)0x89bed4));
+    hook_slf_vtable(slf_deconstructor_cos_num, slf_action_cos_num, static_cast<DWORD*>((void*)0x89a90c));
+    hook_slf_vtable(slf_deconstructor_create_beam, slf_action_create_beam, static_cast<DWORD*>((void*)0x89abb4));
+    hook_slf_vtable(slf_deconstructor_create_credits, slf_action_create_credits, static_cast<DWORD*>((void*)0x89bae8));
+    hook_slf_vtable(slf_deconstructor_create_cut_scene_str, slf_action_create_cut_scene_str, static_cast<DWORD*>((void*)0x89b7c0));
+    // hook_slf_vtable(slf_deconstructor_create_debug_menu_entry_str,slf_action_create_debug_menu_entry_str,static_cast<DWORD*>((void*)0x89c704));
+    // hook_slf_vtable(slf_deconstructor_create_debug_menu_entry_str_str,slf_action_create_debug_menu_entry_str_str,static_cast<DWORD*>((void*)0x89c70c));
+    hook_slf_vtable(slf_deconstructor_create_decal_str_vector3d_num_vector3d, slf_action_create_decal_str_vector3d_num_vector3d, static_cast<DWORD*>((void*)0x89a9f4));
+    hook_slf_vtable(slf_deconstructor_create_entity_str_str, slf_action_create_entity_str_str, static_cast<DWORD*>((void*)0x89af14));
+    hook_slf_vtable(slf_deconstructor_create_entity_in_hero_region_str, slf_action_create_entity_in_hero_region_str, static_cast<DWORD*>((void*)0x89af2c));
+    hook_slf_vtable(slf_deconstructor_create_entity_list, slf_action_create_entity_list, static_cast<DWORD*>((void*)0x89bfcc));
+    hook_slf_vtable(slf_deconstructor_create_entity_tracker_entity, slf_action_create_entity_tracker_entity, static_cast<DWORD*>((void*)0x89c594));
+    hook_slf_vtable(slf_deconstructor_create_item_str, slf_action_create_item_str, static_cast<DWORD*>((void*)0x89b6b4));
+    hook_slf_vtable(slf_deconstructor_create_line_info_vector3d_vector3d, slf_action_create_line_info_vector3d_vector3d, static_cast<DWORD*>((void*)0x89b708));
+    hook_slf_vtable(slf_deconstructor_create_lofi_stereo_sound_inst_str, slf_action_create_lofi_stereo_sound_inst_str, static_cast<DWORD*>((void*)0x89b818));
+    hook_slf_vtable(slf_deconstructor_create_num_list, slf_action_create_num_list, static_cast<DWORD*>((void*)0x89bf54));
+    hook_slf_vtable(slf_deconstructor_create_pfx_str, slf_action_create_pfx_str, static_cast<DWORD*>((void*)0x89c904));
+    hook_slf_vtable(slf_deconstructor_create_pfx_str_vector3d, slf_action_create_pfx_str_vector3d, static_cast<DWORD*>((void*)0x89c90c));
+    hook_slf_vtable(slf_deconstructor_create_polytube, slf_action_create_polytube, static_cast<DWORD*>((void*)0x89c228));
+    hook_slf_vtable(slf_deconstructor_create_polytube_str, slf_action_create_polytube_str, static_cast<DWORD*>((void*)0x89c230));
+    // hook_slf_vtable(slf_deconstructor_create_progression_menu_entry_str_str,slf_action_create_progression_menu_entry_str_str,static_cast<DWORD*>((void*)0x89c714));
+    hook_slf_vtable(slf_deconstructor_create_sound_inst, slf_action_create_sound_inst, static_cast<DWORD*>((void*)0x89b7f8));
+    hook_slf_vtable(slf_deconstructor_create_sound_inst_str, slf_action_create_sound_inst_str, static_cast<DWORD*>((void*)0x89b800));
+    hook_slf_vtable(slf_deconstructor_create_stompable_music_sound_inst_str, slf_action_create_stompable_music_sound_inst_str, static_cast<DWORD*>((void*)0x89b808));
+    hook_slf_vtable(slf_deconstructor_create_str_list, slf_action_create_str_list, static_cast<DWORD*>((void*)0x89c044));
+    hook_slf_vtable(slf_deconstructor_create_taunt_entry_entity_str_num, slf_action_create_taunt_entry_entity_str_num, static_cast<DWORD*>((void*)0x89c63c));
+    hook_slf_vtable(slf_deconstructor_create_taunt_exchange_entity_entity_num_num_num_num_elip, slf_action_create_taunt_exchange_entity_entity_num_num_num_num_elip, static_cast<DWORD*>((void*)0x89c6b4));
+    hook_slf_vtable(slf_deconstructor_create_taunt_exchange_list, slf_action_create_taunt_exchange_list, static_cast<DWORD*>((void*)0x89c0dc));
+    hook_slf_vtable(slf_deconstructor_create_threat_assessment_meter, slf_action_create_threat_assessment_meter, static_cast<DWORD*>((void*)0x89c6cc));
+    hook_slf_vtable(slf_deconstructor_create_time_limited_entity_str_num, slf_action_create_time_limited_entity_str_num, static_cast<DWORD*>((void*)0x89af3c));
+    hook_slf_vtable(slf_deconstructor_create_trigger_entity_num, slf_action_create_trigger_entity_num, static_cast<DWORD*>((void*)0x89b970));
+    hook_slf_vtable(slf_deconstructor_create_trigger_str_vector3d_num, slf_action_create_trigger_str_vector3d_num, static_cast<DWORD*>((void*)0x89b968));
+    hook_slf_vtable(slf_deconstructor_create_trigger_vector3d_num, slf_action_create_trigger_vector3d_num, static_cast<DWORD*>((void*)0x89b960));
+    hook_slf_vtable(slf_deconstructor_create_unstompable_script_cutscene_sound_inst_str, slf_action_create_unstompable_script_cutscene_sound_inst_str, static_cast<DWORD*>((void*)0x89b810));
+    hook_slf_vtable(slf_deconstructor_create_vector3d_list, slf_action_create_vector3d_list, static_cast<DWORD*>((void*)0x89becc));
+    hook_slf_vtable(slf_deconstructor_cross_vector3d_vector3d, slf_action_cross_vector3d_vector3d, static_cast<DWORD*>((void*)0x89ba38));
+    hook_slf_vtable(slf_deconstructor_debug_breakpoint, slf_action_debug_breakpoint, static_cast<DWORD*>((void*)0x89a510));
+    hook_slf_vtable(slf_deconstructor_debug_print_num_str, slf_action_debug_print_num_str, static_cast<DWORD*>((void*)0x89a528));
+    hook_slf_vtable(slf_deconstructor_debug_print_num_vector3d_str, slf_action_debug_print_num_vector3d_str, static_cast<DWORD*>((void*)0x89a530));
+    hook_slf_vtable(slf_deconstructor_debug_print_str, slf_action_debug_print_str, static_cast<DWORD*>((void*)0x89a520));
+    hook_slf_vtable(slf_deconstructor_debug_print_set_background_color_vector3d, slf_action_debug_print_set_background_color_vector3d, static_cast<DWORD*>((void*)0x89a538));
+    hook_slf_vtable(slf_deconstructor_delay_num, slf_action_delay_num, static_cast<DWORD*>((void*)0x89a71c));
+    hook_slf_vtable(slf_deconstructor_destroy_credits, slf_action_destroy_credits, static_cast<DWORD*>((void*)0x89baf0));
+    // hook_slf_vtable(slf_deconstructor_destroy_debug_menu_entry_debug_menu_entry,slf_action_destroy_debug_menu_entry_debug_menu_entry,static_cast<DWORD*>((void*)0x89c71c));
+    hook_slf_vtable(slf_deconstructor_destroy_entity_entity, slf_action_destroy_entity_entity, static_cast<DWORD*>((void*)0x89af34));
+    hook_slf_vtable(slf_deconstructor_destroy_entity_list_entity_list, slf_action_destroy_entity_list_entity_list, static_cast<DWORD*>((void*)0x89bfd4));
+    hook_slf_vtable(slf_deconstructor_destroy_entity_tracker_entity_tracker, slf_action_destroy_entity_tracker_entity_tracker, static_cast<DWORD*>((void*)0x89c59c));
+    hook_slf_vtable(slf_deconstructor_destroy_line_info_line_info, slf_action_destroy_line_info_line_info, static_cast<DWORD*>((void*)0x89b710));
+    hook_slf_vtable(slf_deconstructor_destroy_num_list_num_list, slf_action_destroy_num_list_num_list, static_cast<DWORD*>((void*)0x89bf5c));
+    hook_slf_vtable(slf_deconstructor_destroy_pfx_pfx, slf_action_destroy_pfx_pfx, static_cast<DWORD*>((void*)0x89c914));
+    hook_slf_vtable(slf_deconstructor_destroy_str_list_str_list, slf_action_destroy_str_list_str_list, static_cast<DWORD*>((void*)0x89c04c));
+    hook_slf_vtable(slf_deconstructor_destroy_taunt_entry_taunt_entry, slf_action_destroy_taunt_entry_taunt_entry, static_cast<DWORD*>((void*)0x89c644));
+    hook_slf_vtable(slf_deconstructor_destroy_taunt_exchange_taunt_exchange, slf_action_destroy_taunt_exchange_taunt_exchange, static_cast<DWORD*>((void*)0x89c6bc));
+    hook_slf_vtable(slf_deconstructor_destroy_taunt_exchange_list_taunt_exchange_list, slf_action_destroy_taunt_exchange_list_taunt_exchange_list, static_cast<DWORD*>((void*)0x89c0e4));
+    hook_slf_vtable(slf_deconstructor_destroy_threat_assessment_meter_tam, slf_action_destroy_threat_assessment_meter_tam, static_cast<DWORD*>((void*)0x89c6d4));
+    hook_slf_vtable(slf_deconstructor_destroy_trigger_trigger, slf_action_destroy_trigger_trigger, static_cast<DWORD*>((void*)0x89b978));
+    hook_slf_vtable(slf_deconstructor_destroy_vector3d_list_vector3d_list, slf_action_destroy_vector3d_list_vector3d_list, static_cast<DWORD*>((void*)0x89bedc));
+    hook_slf_vtable(slf_deconstructor_dilated_delay_num, slf_action_dilated_delay_num, static_cast<DWORD*>((void*)0x89a72c));
+    hook_slf_vtable(slf_deconstructor_disable_marky_cam_num, slf_action_disable_marky_cam_num, static_cast<DWORD*>((void*)0x89a5f4));
+    hook_slf_vtable(slf_deconstructor_disable_nearby_occlusion_only_obb_vector3d, slf_action_disable_nearby_occlusion_only_obb_vector3d, static_cast<DWORD*>((void*)0x89a5e4));
+    hook_slf_vtable(slf_deconstructor_disable_player_shadows, slf_action_disable_player_shadows, static_cast<DWORD*>((void*)0x89a614));
+    hook_slf_vtable(slf_deconstructor_disable_subtitles, slf_action_disable_subtitles, static_cast<DWORD*>((void*)0x89a93c));
+    hook_slf_vtable(slf_deconstructor_disable_vibrator, slf_action_disable_vibrator, static_cast<DWORD*>((void*)0x89a7dc));
+    hook_slf_vtable(slf_deconstructor_disable_zoom_map_num, slf_action_disable_zoom_map_num, static_cast<DWORD*>((void*)0x89bbf0));
+    hook_slf_vtable(slf_deconstructor_distance3d_vector3d_vector3d, slf_action_distance3d_vector3d_vector3d, static_cast<DWORD*>((void*)0x89ba48));
+    hook_slf_vtable(slf_deconstructor_distance_chase_widget_set_pos_num, slf_action_distance_chase_widget_set_pos_num, static_cast<DWORD*>((void*)0x89bb88));
+    hook_slf_vtable(slf_deconstructor_distance_chase_widget_turn_off, slf_action_distance_chase_widget_turn_off, static_cast<DWORD*>((void*)0x89bb80));
+    hook_slf_vtable(slf_deconstructor_distance_chase_widget_turn_on_num_num, slf_action_distance_chase_widget_turn_on_num_num, static_cast<DWORD*>((void*)0x89bb78));
+    hook_slf_vtable(slf_deconstructor_distance_race_widget_set_boss_pos_num, slf_action_distance_race_widget_set_boss_pos_num, static_cast<DWORD*>((void*)0x89bba8));
+    hook_slf_vtable(slf_deconstructor_distance_race_widget_set_hero_pos_num, slf_action_distance_race_widget_set_hero_pos_num, static_cast<DWORD*>((void*)0x89bba0));
+    hook_slf_vtable(slf_deconstructor_distance_race_widget_set_types_num_num, slf_action_distance_race_widget_set_types_num_num, static_cast<DWORD*>((void*)0x89bbb0));
+    hook_slf_vtable(slf_deconstructor_distance_race_widget_turn_off, slf_action_distance_race_widget_turn_off, static_cast<DWORD*>((void*)0x89bb98));
+    hook_slf_vtable(slf_deconstructor_distance_race_widget_turn_on, slf_action_distance_race_widget_turn_on, static_cast<DWORD*>((void*)0x89bb90));
+    hook_slf_vtable(slf_deconstructor_district_id_str, slf_action_district_id_str, static_cast<DWORD*>((void*)0x89c47c));
+    hook_slf_vtable(slf_deconstructor_district_name_num, slf_action_district_name_num, static_cast<DWORD*>((void*)0x89c484));
+    hook_slf_vtable(slf_deconstructor_dot_vector3d_vector3d, slf_action_dot_vector3d_vector3d, static_cast<DWORD*>((void*)0x89ba30));
+    hook_slf_vtable(slf_deconstructor_dump_searchable_region_list_str, slf_action_dump_searchable_region_list_str, static_cast<DWORD*>((void*)0x89a994));
+    hook_slf_vtable(slf_deconstructor_enable_ai_num, slf_action_enable_ai_num, static_cast<DWORD*>((void*)0x89a6cc));
+    hook_slf_vtable(slf_deconstructor_enable_civilians_num, slf_action_enable_civilians_num, static_cast<DWORD*>((void*)0x89c5ec));
+    hook_slf_vtable(slf_deconstructor_enable_controls_num, slf_action_enable_controls_num, static_cast<DWORD*>((void*)0x89bd40));
+    hook_slf_vtable(slf_deconstructor_enable_entity_fading_num, slf_action_enable_entity_fading_num, static_cast<DWORD*>((void*)0x89b05c));
+    hook_slf_vtable(slf_deconstructor_enable_interface_num, slf_action_enable_interface_num, static_cast<DWORD*>((void*)0x89a6c4));
+    hook_slf_vtable(slf_deconstructor_enable_marky_cam_num, slf_action_enable_marky_cam_num, static_cast<DWORD*>((void*)0x89a5bc));
+    hook_slf_vtable(slf_deconstructor_enable_mini_map_num, slf_action_enable_mini_map_num, static_cast<DWORD*>((void*)0x89bbe8));
+    hook_slf_vtable(slf_deconstructor_enable_nearby_occlusion_only_obb_vector3d, slf_action_enable_nearby_occlusion_only_obb_vector3d, static_cast<DWORD*>((void*)0x89a5dc));
+    hook_slf_vtable(slf_deconstructor_enable_obb_vector3d_num, slf_action_enable_obb_vector3d_num, static_cast<DWORD*>((void*)0x89a588));
+    hook_slf_vtable(slf_deconstructor_enable_pause_num, slf_action_enable_pause_num, static_cast<DWORD*>((void*)0x89a6ac));
+    hook_slf_vtable(slf_deconstructor_enable_physics_num, slf_action_enable_physics_num, static_cast<DWORD*>((void*)0x89a6dc));
+    hook_slf_vtable(slf_deconstructor_enable_player_shadows, slf_action_enable_player_shadows, static_cast<DWORD*>((void*)0x89a61c));
+    hook_slf_vtable(slf_deconstructor_enable_pois_num, slf_action_enable_pois_num, static_cast<DWORD*>((void*)0x89a6ec));
+    hook_slf_vtable(slf_deconstructor_enable_quad_path_connector_district_num_district_num_num, slf_action_enable_quad_path_connector_district_num_district_num_num, static_cast<DWORD*>((void*)0x89a578));
+    hook_slf_vtable(slf_deconstructor_enable_subtitles, slf_action_enable_subtitles, static_cast<DWORD*>((void*)0x89a934));
+    hook_slf_vtable(slf_deconstructor_enable_tokens_of_type_num_num, slf_action_enable_tokens_of_type_num_num, static_cast<DWORD*>((void*)0x89b54c));
+    hook_slf_vtable(slf_deconstructor_enable_traffic_num, slf_action_enable_traffic_num, static_cast<DWORD*>((void*)0x89c5fc));
+    hook_slf_vtable(slf_deconstructor_enable_user_camera_num, slf_action_enable_user_camera_num, static_cast<DWORD*>((void*)0x89a5d4));
+    hook_slf_vtable(slf_deconstructor_enable_vibrator, slf_action_enable_vibrator, static_cast<DWORD*>((void*)0x89a7e4));
+    hook_slf_vtable(slf_deconstructor_end_current_patrol, slf_action_end_current_patrol, static_cast<DWORD*>((void*)0x89c4fc));
+    hook_slf_vtable(slf_deconstructor_end_cut_scenes, slf_action_end_cut_scenes, static_cast<DWORD*>((void*)0x89b7c8));
+    hook_slf_vtable(slf_deconstructor_end_screen_recording, slf_action_end_screen_recording, static_cast<DWORD*>((void*)0x89b7b8));
+    hook_slf_vtable(slf_deconstructor_entity_col_check_entity_entity, slf_action_entity_col_check_entity_entity, static_cast<DWORD*>((void*)0x89a88c));
+    hook_slf_vtable(slf_deconstructor_entity_get_entity_tracker_entity, slf_action_entity_get_entity_tracker_entity, static_cast<DWORD*>((void*)0x89b034));
+    hook_slf_vtable(slf_deconstructor_entity_has_entity_tracker_entity, slf_action_entity_has_entity_tracker_entity, static_cast<DWORD*>((void*)0x89b02c));
+    hook_slf_vtable(slf_deconstructor_exit_water_entity, slf_action_exit_water_entity, static_cast<DWORD*>((void*)0x89a604));
+    hook_slf_vtable(slf_deconstructor_find_closest_point_on_a_path_to_point_vector3d, slf_action_find_closest_point_on_a_path_to_point_vector3d, static_cast<DWORD*>((void*)0x89a570));
+    hook_slf_vtable(slf_deconstructor_find_district_for_point_vector3d, slf_action_find_district_for_point_vector3d, static_cast<DWORD*>((void*)0x89a81c));
+    hook_slf_vtable(slf_deconstructor_find_entities_in_radius_entity_list_vector3d_num_num, slf_action_find_entities_in_radius_entity_list_vector3d_num_num, static_cast<DWORD*>((void*)0x89b46c));
+    hook_slf_vtable(slf_deconstructor_find_entity_str, slf_action_find_entity_str, static_cast<DWORD*>((void*)0x89af1c));
+    hook_slf_vtable(slf_deconstructor_find_innermost_district_vector3d, slf_action_find_innermost_district_vector3d, static_cast<DWORD*>((void*)0x89a824));
+    hook_slf_vtable(slf_deconstructor_find_outermost_district_vector3d, slf_action_find_outermost_district_vector3d, static_cast<DWORD*>((void*)0x89a82c));
+    hook_slf_vtable(slf_deconstructor_find_trigger_entity, slf_action_find_trigger_entity, static_cast<DWORD*>((void*)0x89b950));
+    hook_slf_vtable(slf_deconstructor_find_trigger_str, slf_action_find_trigger_str, static_cast<DWORD*>((void*)0x89b948));
+    hook_slf_vtable(slf_deconstructor_find_trigger_in_district_district_str, slf_action_find_trigger_in_district_district_str, static_cast<DWORD*>((void*)0x89b958));
+    hook_slf_vtable(slf_deconstructor_float_random_num, slf_action_float_random_num, static_cast<DWORD*>((void*)0x89a74c));
+    hook_slf_vtable(slf_deconstructor_force_mission_district_str_num, slf_action_force_mission_district_str_num, static_cast<DWORD*>((void*)0x89c3b4));
+    hook_slf_vtable(slf_deconstructor_force_streamer_refresh, slf_action_force_streamer_refresh, static_cast<DWORD*>((void*)0x89c4ac));
+    hook_slf_vtable(slf_deconstructor_format_time_string_num, slf_action_format_time_string_num, static_cast<DWORD*>((void*)0x89bc74));
+    hook_slf_vtable(slf_deconstructor_freeze_hero_num, slf_action_freeze_hero_num, static_cast<DWORD*>((void*)0x89a5fc));
+    hook_slf_vtable(slf_deconstructor_game_ini_get_flag_str, slf_action_game_ini_get_flag_str, static_cast<DWORD*>((void*)0x89a97c));
+    hook_slf_vtable(slf_deconstructor_game_time_advance_num_num, slf_action_game_time_advance_num_num, static_cast<DWORD*>((void*)0x89c4dc));
+    hook_slf_vtable(slf_deconstructor_get_all_execs_thread_count_str, slf_action_get_all_execs_thread_count_str, static_cast<DWORD*>((void*)0x89a9ec));
+    hook_slf_vtable(slf_deconstructor_get_all_instances_thread_count_str, slf_action_get_all_instances_thread_count_str, static_cast<DWORD*>((void*)0x89a9e4));
+    hook_slf_vtable(slf_deconstructor_get_attacker_entity, slf_action_get_attacker_entity, static_cast<DWORD*>((void*)0x89aa24));
+    hook_slf_vtable(slf_deconstructor_get_attacker_member, slf_action_get_attacker_member, static_cast<DWORD*>((void*)0x89aa2c));
+    hook_slf_vtable(slf_deconstructor_get_available_stack_size, slf_action_get_available_stack_size, static_cast<DWORD*>((void*)0x89c4ec));
+    hook_slf_vtable(slf_deconstructor_get_character_packname_list, slf_action_get_character_packname_list, static_cast<DWORD*>((void*)0x89c354));
+    hook_slf_vtable(slf_deconstructor_get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list, slf_action_get_closest_point_on_lane_with_facing_num_vector3d_vector3d_list, static_cast<DWORD*>((void*)0x89c61c));
+    hook_slf_vtable(slf_deconstructor_get_col_hit_ent, slf_action_get_col_hit_ent, static_cast<DWORD*>((void*)0x89a884));
+    hook_slf_vtable(slf_deconstructor_get_col_hit_norm, slf_action_get_col_hit_norm, static_cast<DWORD*>((void*)0x89a87c));
+    hook_slf_vtable(slf_deconstructor_get_col_hit_pos, slf_action_get_col_hit_pos, static_cast<DWORD*>((void*)0x89a874));
+    hook_slf_vtable(slf_deconstructor_get_control_state_num, slf_action_get_control_state_num, static_cast<DWORD*>((void*)0x89a7f4));
+    hook_slf_vtable(slf_deconstructor_get_control_trigger_num, slf_action_get_control_trigger_num, static_cast<DWORD*>((void*)0x89a7ec));
+    hook_slf_vtable(slf_deconstructor_get_current_instance_thread_count_str, slf_action_get_current_instance_thread_count_str, static_cast<DWORD*>((void*)0x89a9dc));
+    hook_slf_vtable(slf_deconstructor_get_current_view_cam_pos, slf_action_get_current_view_cam_pos, static_cast<DWORD*>((void*)0x89a5b4));
+    hook_slf_vtable(slf_deconstructor_get_current_view_cam_x_facing, slf_action_get_current_view_cam_x_facing, static_cast<DWORD*>((void*)0x89a59c));
+    hook_slf_vtable(slf_deconstructor_get_current_view_cam_y_facing, slf_action_get_current_view_cam_y_facing, static_cast<DWORD*>((void*)0x89a5a4));
+    hook_slf_vtable(slf_deconstructor_get_current_view_cam_z_facing, slf_action_get_current_view_cam_z_facing, static_cast<DWORD*>((void*)0x89a5ac));
+    hook_slf_vtable(slf_deconstructor_get_fog_color, slf_action_get_fog_color, static_cast<DWORD*>((void*)0x89a8f4));
+    hook_slf_vtable(slf_deconstructor_get_fog_distance, slf_action_get_fog_distance, static_cast<DWORD*>((void*)0x89a8fc));
+    hook_slf_vtable(slf_deconstructor_get_game_info_num_str, slf_action_get_game_info_num_str, static_cast<DWORD*>((void*)0x89a8c4));
+    hook_slf_vtable(slf_deconstructor_get_game_info_str_str, slf_action_get_game_info_str_str, static_cast<DWORD*>((void*)0x89a8d4));
+    hook_slf_vtable(slf_deconstructor_get_glam_cam_num, slf_action_get_glam_cam_num, static_cast<DWORD*>((void*)0x89b780));
+    hook_slf_vtable(slf_deconstructor_get_global_time_dilation, slf_action_get_global_time_dilation, static_cast<DWORD*>((void*)0x89a894));
+    hook_slf_vtable(slf_deconstructor_get_ini_flag_str, slf_action_get_ini_flag_str, static_cast<DWORD*>((void*)0x89a94c));
+    hook_slf_vtable(slf_deconstructor_get_ini_num_str, slf_action_get_ini_num_str, static_cast<DWORD*>((void*)0x89a954));
+    hook_slf_vtable(slf_deconstructor_get_int_num_num, slf_action_get_int_num_num, static_cast<DWORD*>((void*)0x89a92c));
+    hook_slf_vtable(slf_deconstructor_get_mission_camera_marker_num, slf_action_get_mission_camera_marker_num, static_cast<DWORD*>((void*)0x89c414));
+    hook_slf_vtable(slf_deconstructor_get_mission_camera_transform_marker_num, slf_action_get_mission_camera_transform_marker_num, static_cast<DWORD*>((void*)0x89c454));
+    hook_slf_vtable(slf_deconstructor_get_mission_entity, slf_action_get_mission_entity, static_cast<DWORD*>((void*)0x89c38c));
+    hook_slf_vtable(slf_deconstructor_get_mission_key_posfacing3d, slf_action_get_mission_key_posfacing3d, static_cast<DWORD*>((void*)0x89c36c));
+    hook_slf_vtable(slf_deconstructor_get_mission_key_position, slf_action_get_mission_key_position, static_cast<DWORD*>((void*)0x89c364));
+    hook_slf_vtable(slf_deconstructor_get_mission_marker_num, slf_action_get_mission_marker_num, static_cast<DWORD*>((void*)0x89c40c));
+    hook_slf_vtable(slf_deconstructor_get_mission_nums, slf_action_get_mission_nums, static_cast<DWORD*>((void*)0x89c3ac));
+    hook_slf_vtable(slf_deconstructor_get_mission_patrol_waypoint, slf_action_get_mission_patrol_waypoint, static_cast<DWORD*>((void*)0x89c384));
+    hook_slf_vtable(slf_deconstructor_get_mission_positions, slf_action_get_mission_positions, static_cast<DWORD*>((void*)0x89c39c));
+    hook_slf_vtable(slf_deconstructor_get_mission_strings, slf_action_get_mission_strings, static_cast<DWORD*>((void*)0x89c3a4));
+    hook_slf_vtable(slf_deconstructor_get_mission_transform_marker_num, slf_action_get_mission_transform_marker_num, static_cast<DWORD*>((void*)0x89c42c));
+    hook_slf_vtable(slf_deconstructor_get_mission_trigger, slf_action_get_mission_trigger, static_cast<DWORD*>((void*)0x89c394));
+    hook_slf_vtable(slf_deconstructor_get_missions_key_position_by_index_district_str_num, slf_action_get_missions_key_position_by_index_district_str_num, static_cast<DWORD*>((void*)0x89c3bc));
+    hook_slf_vtable(slf_deconstructor_get_missions_nums_by_index_district_str_num_num_list, slf_action_get_missions_nums_by_index_district_str_num_num_list, static_cast<DWORD*>((void*)0x89c3cc));
+    hook_slf_vtable(slf_deconstructor_get_missions_patrol_waypoint_by_index_district_str_num, slf_action_get_missions_patrol_waypoint_by_index_district_str_num, static_cast<DWORD*>((void*)0x89c3c4));
+    hook_slf_vtable(slf_deconstructor_get_neighborhood_name_num, slf_action_get_neighborhood_name_num, static_cast<DWORD*>((void*)0x89c54c));
+    hook_slf_vtable(slf_deconstructor_get_num_free_slots_str, slf_action_get_num_free_slots_str, static_cast<DWORD*>((void*)0x89c3e4));
+    hook_slf_vtable(slf_deconstructor_get_num_mission_transform_marker, slf_action_get_num_mission_transform_marker, static_cast<DWORD*>((void*)0x89c434));
+    hook_slf_vtable(slf_deconstructor_get_pack_group_str, slf_action_get_pack_group_str, static_cast<DWORD*>((void*)0x89c3ec));
+    hook_slf_vtable(slf_deconstructor_get_pack_size_str, slf_action_get_pack_size_str, static_cast<DWORD*>((void*)0x89c4e4));
+    hook_slf_vtable(slf_deconstructor_get_patrol_difficulty_str, slf_action_get_patrol_difficulty_str, static_cast<DWORD*>((void*)0x89c534));
+    hook_slf_vtable(slf_deconstructor_get_patrol_node_position_by_index_str_num, slf_action_get_patrol_node_position_by_index_str_num, static_cast<DWORD*>((void*)0x89c52c));
+    hook_slf_vtable(slf_deconstructor_get_patrol_start_position_str, slf_action_get_patrol_start_position_str, static_cast<DWORD*>((void*)0x89c524));
+    hook_slf_vtable(slf_deconstructor_get_patrol_unlock_threshold_str, slf_action_get_patrol_unlock_threshold_str, static_cast<DWORD*>((void*)0x89c53c));
+    hook_slf_vtable(slf_deconstructor_get_platform, slf_action_get_platform, static_cast<DWORD*>((void*)0x89a508));
+    hook_slf_vtable(slf_deconstructor_get_render_opt_num_str, slf_action_get_render_opt_num_str, static_cast<DWORD*>((void*)0x89a8e4));
+    hook_slf_vtable(slf_deconstructor_get_spider_reflexes_spiderman_time_dilation, slf_action_get_spider_reflexes_spiderman_time_dilation, static_cast<DWORD*>((void*)0x89cac4));
+    hook_slf_vtable(slf_deconstructor_get_spider_reflexes_world_time_dilation, slf_action_get_spider_reflexes_world_time_dilation, static_cast<DWORD*>((void*)0x89cad4));
+    hook_slf_vtable(slf_deconstructor_get_time_inc, slf_action_get_time_inc, static_cast<DWORD*>((void*)0x89a7a4));
+    hook_slf_vtable(slf_deconstructor_get_time_of_day, slf_action_get_time_of_day, static_cast<DWORD*>((void*)0x89a974));
+    hook_slf_vtable(slf_deconstructor_get_time_of_day_rate, slf_action_get_time_of_day_rate, static_cast<DWORD*>((void*)0x89a96c));
+    hook_slf_vtable(slf_deconstructor_get_token_index_from_id_num_num, slf_action_get_token_index_from_id_num_num, static_cast<DWORD*>((void*)0x89b554));
+    hook_slf_vtable(slf_deconstructor_get_traffic_spawn_point_near_camera_vector3d_list, slf_action_get_traffic_spawn_point_near_camera_vector3d_list, static_cast<DWORD*>((void*)0x89aa98));
+    hook_slf_vtable(slf_deconstructor_greater_than_or_equal_rounded_num_num, slf_action_greater_than_or_equal_rounded_num_num, static_cast<DWORD*>((void*)0x89bc90));
+    hook_slf_vtable(slf_deconstructor_hard_break, slf_action_hard_break, static_cast<DWORD*>((void*)0x89aa1c));
+    hook_slf_vtable(slf_deconstructor_has_substring_str_str, slf_action_has_substring_str_str, static_cast<DWORD*>((void*)0x89a580));
+    hook_slf_vtable(slf_deconstructor_hero, slf_action_hero, static_cast<DWORD*>((void*)0x89aed4));
+    hook_slf_vtable(slf_deconstructor_hero_exists, slf_action_hero_exists, static_cast<DWORD*>((void*)0x89aedc));
+    hook_slf_vtable(slf_deconstructor_hero_type, slf_action_hero_type, static_cast<DWORD*>((void*)0x89aee4));
+    hook_slf_vtable(slf_deconstructor_hide_controller_gauge, slf_action_hide_controller_gauge, static_cast<DWORD*>((void*)0x89bb20));
+    hook_slf_vtable(slf_deconstructor_initialize_encounter_object, slf_action_initialize_encounter_object, static_cast<DWORD*>((void*)0x89aa0c));
+    hook_slf_vtable(slf_deconstructor_initialize_encounter_objects, slf_action_initialize_encounter_objects, static_cast<DWORD*>((void*)0x89aa04));
+    hook_slf_vtable(slf_deconstructor_insert_pack_str, slf_action_insert_pack_str, static_cast<DWORD*>((void*)0x89c3d4));
+    hook_slf_vtable(slf_deconstructor_invoke_pause_menu_unlockables, slf_action_invoke_pause_menu_unlockables, static_cast<DWORD*>((void*)0x89bc98));
+    hook_slf_vtable(slf_deconstructor_is_ai_enabled, slf_action_is_ai_enabled, static_cast<DWORD*>((void*)0x89a6d4));
+    hook_slf_vtable(slf_deconstructor_is_cut_scene_playing, slf_action_is_cut_scene_playing, static_cast<DWORD*>((void*)0x89b7d0));
+    hook_slf_vtable(slf_deconstructor_is_district_loaded_num, slf_action_is_district_loaded_num, static_cast<DWORD*>((void*)0x89c49c));
+    hook_slf_vtable(slf_deconstructor_is_hero_frozen, slf_action_is_hero_frozen, static_cast<DWORD*>((void*)0x89a60c));
+    hook_slf_vtable(slf_deconstructor_is_hero_peter_parker, slf_action_is_hero_peter_parker, static_cast<DWORD*>((void*)0x89aefc));
+    hook_slf_vtable(slf_deconstructor_is_hero_spidey, slf_action_is_hero_spidey, static_cast<DWORD*>((void*)0x89aeec));
+    hook_slf_vtable(slf_deconstructor_is_hero_venom, slf_action_is_hero_venom, static_cast<DWORD*>((void*)0x89aef4));
+    hook_slf_vtable(slf_deconstructor_is_marky_cam_enabled, slf_action_is_marky_cam_enabled, static_cast<DWORD*>((void*)0x89a5c4));
+    hook_slf_vtable(slf_deconstructor_is_mission_active, slf_action_is_mission_active, static_cast<DWORD*>((void*)0x89c50c));
+    hook_slf_vtable(slf_deconstructor_is_mission_loading, slf_action_is_mission_loading, static_cast<DWORD*>((void*)0x89c514));
+    hook_slf_vtable(slf_deconstructor_is_pack_available_str, slf_action_is_pack_available_str, static_cast<DWORD*>((void*)0x89c404));
+    hook_slf_vtable(slf_deconstructor_is_pack_loaded_str, slf_action_is_pack_loaded_str, static_cast<DWORD*>((void*)0x89c3fc));
+    hook_slf_vtable(slf_deconstructor_is_pack_pushed_str, slf_action_is_pack_pushed_str, static_cast<DWORD*>((void*)0x89c34c));
+    hook_slf_vtable(slf_deconstructor_is_path_graph_inside_glass_house_str, slf_action_is_path_graph_inside_glass_house_str, static_cast<DWORD*>((void*)0x89aaa0));
+    hook_slf_vtable(slf_deconstructor_is_patrol_active, slf_action_is_patrol_active, static_cast<DWORD*>((void*)0x89c504));
+    hook_slf_vtable(slf_deconstructor_is_patrol_node_empty_num, slf_action_is_patrol_node_empty_num, static_cast<DWORD*>((void*)0x89c544));
+    hook_slf_vtable(slf_deconstructor_is_paused, slf_action_is_paused, static_cast<DWORD*>((void*)0x89a6b4));
+    hook_slf_vtable(slf_deconstructor_is_physics_enabled, slf_action_is_physics_enabled, static_cast<DWORD*>((void*)0x89a6e4));
+    hook_slf_vtable(slf_deconstructor_is_point_inside_glass_house_vector3d, slf_action_is_point_inside_glass_house_vector3d, static_cast<DWORD*>((void*)0x89a540));
+    hook_slf_vtable(slf_deconstructor_is_point_under_water_vector3d, slf_action_is_point_under_water_vector3d, static_cast<DWORD*>((void*)0x89aa3c));
+    hook_slf_vtable(slf_deconstructor_is_user_camera_enabled, slf_action_is_user_camera_enabled, static_cast<DWORD*>((void*)0x89a5cc));
+    hook_slf_vtable(slf_deconstructor_load_anim_str, slf_action_load_anim_str, static_cast<DWORD*>((void*)0x89aaf0));
+    hook_slf_vtable(slf_deconstructor_load_level_str_vector3d, slf_action_load_level_str_vector3d, static_cast<DWORD*>((void*)0x89a8ac));
+    hook_slf_vtable(slf_deconstructor_lock_all_districts, slf_action_lock_all_districts, static_cast<DWORD*>((void*)0x89c4c4));
+    hook_slf_vtable(slf_deconstructor_lock_district_num, slf_action_lock_district_num, static_cast<DWORD*>((void*)0x89c494));
+    hook_slf_vtable(slf_deconstructor_lock_mission_manager_num, slf_action_lock_mission_manager_num, static_cast<DWORD*>((void*)0x89c51c));
+    hook_slf_vtable(slf_deconstructor_los_check_vector3d_vector3d, slf_action_los_check_vector3d_vector3d, static_cast<DWORD*>((void*)0x89a814));
+    hook_slf_vtable(slf_deconstructor_lower_hotpursuit_indicator_level, slf_action_lower_hotpursuit_indicator_level, static_cast<DWORD*>((void*)0x89bae0));
+    hook_slf_vtable(slf_deconstructor_malor_vector3d_num, slf_action_malor_vector3d_num, static_cast<DWORD*>((void*)0x89a984));
+    hook_slf_vtable(slf_deconstructor_normal_vector3d, slf_action_normal_vector3d, static_cast<DWORD*>((void*)0x89ba40));
+    hook_slf_vtable(slf_deconstructor_pause_game_num, slf_action_pause_game_num, static_cast<DWORD*>((void*)0x89a6bc));
+    hook_slf_vtable(slf_deconstructor_play_credits, slf_action_play_credits, static_cast<DWORD*>((void*)0x89baf8));
+    hook_slf_vtable(slf_deconstructor_play_prerender_str, slf_action_play_prerender_str, static_cast<DWORD*>((void*)0x89a8b4));
+    hook_slf_vtable(slf_deconstructor_pop_pack_str, slf_action_pop_pack_str, static_cast<DWORD*>((void*)0x89c344));
+    hook_slf_vtable(slf_deconstructor_post_message_str_num, slf_action_post_message_str_num, static_cast<DWORD*>((void*)0x89a73c));
+    hook_slf_vtable(slf_deconstructor_pre_roll_all_pfx_num, slf_action_pre_roll_all_pfx_num, static_cast<DWORD*>((void*)0x89aa34));
+    hook_slf_vtable(slf_deconstructor_press_controller_gauge_num, slf_action_press_controller_gauge_num, static_cast<DWORD*>((void*)0x89bb28));
+    hook_slf_vtable(slf_deconstructor_press_controller_gauge_num_num_num, slf_action_press_controller_gauge_num_num_num, static_cast<DWORD*>((void*)0x89bb30));
+    hook_slf_vtable(slf_deconstructor_purge_district_num, slf_action_purge_district_num, static_cast<DWORD*>((void*)0x89c4bc));
+    hook_slf_vtable(slf_deconstructor_push_pack_str, slf_action_push_pack_str, static_cast<DWORD*>((void*)0x89c334));
+    hook_slf_vtable(slf_deconstructor_push_pack_into_district_slot_str, slf_action_push_pack_into_district_slot_str, static_cast<DWORD*>((void*)0x89c33c));
+    hook_slf_vtable(slf_deconstructor_raise_hotpursuit_indicator_level, slf_action_raise_hotpursuit_indicator_level, static_cast<DWORD*>((void*)0x89bad8));
+    hook_slf_vtable(slf_deconstructor_random_num, slf_action_random_num, static_cast<DWORD*>((void*)0x89a744));
+    hook_slf_vtable(slf_deconstructor_remove_civilian_info_num, slf_action_remove_civilian_info_num, static_cast<DWORD*>((void*)0x89c5c4));
+    hook_slf_vtable(slf_deconstructor_remove_civilian_info_entity_entity_num, slf_action_remove_civilian_info_entity_entity_num, static_cast<DWORD*>((void*)0x89c5d4));
+    hook_slf_vtable(slf_deconstructor_remove_glass_house_str, slf_action_remove_glass_house_str, static_cast<DWORD*>((void*)0x89a568));
+    hook_slf_vtable(slf_deconstructor_remove_item_entity_from_world_entity, slf_action_remove_item_entity_from_world_entity, static_cast<DWORD*>((void*)0x89affc));
+    hook_slf_vtable(slf_deconstructor_remove_pack_str, slf_action_remove_pack_str, static_cast<DWORD*>((void*)0x89c3dc));
+    hook_slf_vtable(slf_deconstructor_remove_traffic_model_num, slf_action_remove_traffic_model_num, static_cast<DWORD*>((void*)0x89c5ac));
+    hook_slf_vtable(slf_deconstructor_reset_externed_alses, slf_action_reset_externed_alses, static_cast<DWORD*>((void*)0x89b064));
+    hook_slf_vtable(slf_deconstructor_set_all_anchors_activated_num, slf_action_set_all_anchors_activated_num, static_cast<DWORD*>((void*)0x89caec));
+    hook_slf_vtable(slf_deconstructor_set_blur_num, slf_action_set_blur_num, static_cast<DWORD*>((void*)0x89a63c));
+    hook_slf_vtable(slf_deconstructor_set_blur_blend_mode_num, slf_action_set_blur_blend_mode_num, static_cast<DWORD*>((void*)0x89a664));
+    hook_slf_vtable(slf_deconstructor_set_blur_color_vector3d, slf_action_set_blur_color_vector3d, static_cast<DWORD*>((void*)0x89a644));
+    hook_slf_vtable(slf_deconstructor_set_blur_offset_num_num, slf_action_set_blur_offset_num_num, static_cast<DWORD*>((void*)0x89a654));
+    hook_slf_vtable(slf_deconstructor_set_blur_rot_num, slf_action_set_blur_rot_num, static_cast<DWORD*>((void*)0x89a65c));
+    hook_slf_vtable(slf_deconstructor_set_blur_scale_num_num, slf_action_set_blur_scale_num_num, static_cast<DWORD*>((void*)0x89a64c));
+    hook_slf_vtable(slf_deconstructor_set_clear_color_vector3d, slf_action_set_clear_color_vector3d, static_cast<DWORD*>((void*)0x89a6f4));
+    hook_slf_vtable(slf_deconstructor_set_current_mission_objective_caption_num, slf_action_set_current_mission_objective_caption_num, static_cast<DWORD*>((void*)0x89cadc));
+    hook_slf_vtable(slf_deconstructor_set_default_traffic_hitpoints_num, slf_action_set_default_traffic_hitpoints_num, static_cast<DWORD*>((void*)0x89c614));
+    hook_slf_vtable(slf_deconstructor_set_dialog_box_flavor_num, slf_action_set_dialog_box_flavor_num, static_cast<DWORD*>((void*)0x89bc5c));
+    hook_slf_vtable(slf_deconstructor_set_dialog_box_lockout_time_num, slf_action_set_dialog_box_lockout_time_num, static_cast<DWORD*>((void*)0x89bc6c));
+    hook_slf_vtable(slf_deconstructor_set_engine_property_str_num, slf_action_set_engine_property_str_num, static_cast<DWORD*>((void*)0x89a99c));
+    hook_slf_vtable(slf_deconstructor_set_fov_num, slf_action_set_fov_num, static_cast<DWORD*>((void*)0x89a62c));
+    hook_slf_vtable(slf_deconstructor_set_game_info_num_str_num, slf_action_set_game_info_num_str_num, static_cast<DWORD*>((void*)0x89a8bc));
+    hook_slf_vtable(slf_deconstructor_set_game_info_str_str_str, slf_action_set_game_info_str_str_str, static_cast<DWORD*>((void*)0x89a8cc));
+    hook_slf_vtable(slf_deconstructor_set_global_time_dilation_num, slf_action_set_global_time_dilation_num, static_cast<DWORD*>((void*)0x89a89c));
+    hook_slf_vtable(slf_deconstructor_set_marky_cam_lookat_vector3d, slf_action_set_marky_cam_lookat_vector3d, static_cast<DWORD*>((void*)0x89a5ec));
+    hook_slf_vtable(slf_deconstructor_set_max_streaming_distance_num, slf_action_set_max_streaming_distance_num, static_cast<DWORD*>((void*)0x89c4b4));
+    hook_slf_vtable(slf_deconstructor_set_mission_key_pos_facing_vector3d_vector3d, slf_action_set_mission_key_pos_facing_vector3d_vector3d, static_cast<DWORD*>((void*)0x89c37c));
+    hook_slf_vtable(slf_deconstructor_set_mission_key_position_vector3d, slf_action_set_mission_key_position_vector3d, static_cast<DWORD*>((void*)0x89c374));
+    hook_slf_vtable(slf_deconstructor_set_mission_text_num_elip, slf_action_set_mission_text_num_elip, static_cast<DWORD*>((void*)0x89bbf8));
+    hook_slf_vtable(slf_deconstructor_set_mission_text_box_flavor_num, slf_action_set_mission_text_box_flavor_num, static_cast<DWORD*>((void*)0x89bc64));
+    hook_slf_vtable(slf_deconstructor_set_mission_text_debug_str, slf_action_set_mission_text_debug_str, static_cast<DWORD*>((void*)0x89bc00));
+    hook_slf_vtable(slf_deconstructor_set_parking_density_num, slf_action_set_parking_density_num, static_cast<DWORD*>((void*)0x89c60c));
+    hook_slf_vtable(slf_deconstructor_set_pedestrian_density_num, slf_action_set_pedestrian_density_num, static_cast<DWORD*>((void*)0x89c5f4));
+    hook_slf_vtable(slf_deconstructor_set_render_opt_num_str_num, slf_action_set_render_opt_num_str_num, static_cast<DWORD*>((void*)0x89a8dc));
+    hook_slf_vtable(slf_deconstructor_set_score_widget_score_num, slf_action_set_score_widget_score_num, static_cast<DWORD*>((void*)0x89bac8));
+    hook_slf_vtable(slf_deconstructor_set_sound_category_volume_num_num_num, slf_action_set_sound_category_volume_num_num_num, static_cast<DWORD*>((void*)0x89a9d4));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_num, slf_action_set_spider_reflexes_blur_num, static_cast<DWORD*>((void*)0x89a674));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_blend_mode_num, slf_action_set_spider_reflexes_blur_blend_mode_num, static_cast<DWORD*>((void*)0x89a69c));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_color_vector3d, slf_action_set_spider_reflexes_blur_color_vector3d, static_cast<DWORD*>((void*)0x89a67c));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_offset_num_num, slf_action_set_spider_reflexes_blur_offset_num_num, static_cast<DWORD*>((void*)0x89a68c));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_rot_num, slf_action_set_spider_reflexes_blur_rot_num, static_cast<DWORD*>((void*)0x89a694));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_blur_scale_num_num, slf_action_set_spider_reflexes_blur_scale_num_num, static_cast<DWORD*>((void*)0x89a684));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_hero_meter_depletion_rate_num, slf_action_set_spider_reflexes_hero_meter_depletion_rate_num, static_cast<DWORD*>((void*)0x89cab4));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_spiderman_time_dilation_num, slf_action_set_spider_reflexes_spiderman_time_dilation_num, static_cast<DWORD*>((void*)0x89cabc));
+    hook_slf_vtable(slf_deconstructor_set_spider_reflexes_world_time_dilation_num, slf_action_set_spider_reflexes_world_time_dilation_num, static_cast<DWORD*>((void*)0x89cacc));
+    hook_slf_vtable(slf_deconstructor_set_state_of_the_story_caption_num, slf_action_set_state_of_the_story_caption_num, static_cast<DWORD*>((void*)0x89cae4));
+    hook_slf_vtable(slf_deconstructor_set_target_info_entity_vector3d_vector3d, slf_action_set_target_info_entity_vector3d_vector3d, static_cast<DWORD*>((void*)0x89b6c4));
+    hook_slf_vtable(slf_deconstructor_set_time_of_day_num, slf_action_set_time_of_day_num, static_cast<DWORD*>((void*)0x89a964));
+    hook_slf_vtable(slf_deconstructor_set_traffic_density_num, slf_action_set_traffic_density_num, static_cast<DWORD*>((void*)0x89c604));
+    hook_slf_vtable(slf_deconstructor_set_traffic_model_usage_num_num, slf_action_set_traffic_model_usage_num_num, static_cast<DWORD*>((void*)0x89c5b4));
+    hook_slf_vtable(slf_deconstructor_set_vibration_resume_num, slf_action_set_vibration_resume_num, static_cast<DWORD*>((void*)0x89a7d4));
+    hook_slf_vtable(slf_deconstructor_set_whoosh_interp_rate_num, slf_action_set_whoosh_interp_rate_num, static_cast<DWORD*>((void*)0x89b504));
+    hook_slf_vtable(slf_deconstructor_set_whoosh_pitch_range_num_num, slf_action_set_whoosh_pitch_range_num_num, static_cast<DWORD*>((void*)0x89b4fc));
+    hook_slf_vtable(slf_deconstructor_set_whoosh_speed_range_num_num, slf_action_set_whoosh_speed_range_num_num, static_cast<DWORD*>((void*)0x89b4ec));
+    hook_slf_vtable(slf_deconstructor_set_whoosh_volume_range_num_num, slf_action_set_whoosh_volume_range_num_num, static_cast<DWORD*>((void*)0x89b4f4));
+    hook_slf_vtable(slf_deconstructor_set_zoom_num, slf_action_set_zoom_num, static_cast<DWORD*>((void*)0x89a624));
+    hook_slf_vtable(slf_deconstructor_show_controller_gauge, slf_action_show_controller_gauge, static_cast<DWORD*>((void*)0x89bb18));
+    hook_slf_vtable(slf_deconstructor_show_hotpursuit_indicator_num, slf_action_show_hotpursuit_indicator_num, static_cast<DWORD*>((void*)0x89bad0));
+    hook_slf_vtable(slf_deconstructor_show_score_widget_num, slf_action_show_score_widget_num, static_cast<DWORD*>((void*)0x89bac0));
+    hook_slf_vtable(slf_deconstructor_shut_up_all_ai_voice_boxes, slf_action_shut_up_all_ai_voice_boxes, static_cast<DWORD*>((void*)0x89b50c));
+    hook_slf_vtable(slf_deconstructor_sin_num, slf_action_sin_num, static_cast<DWORD*>((void*)0x89a904));
+    hook_slf_vtable(slf_deconstructor_sin_cos_num, slf_action_sin_cos_num, static_cast<DWORD*>((void*)0x89a924));
+    hook_slf_vtable(slf_deconstructor_soft_load_num, slf_action_soft_load_num, static_cast<DWORD*>((void*)0x89bcbc));
+    hook_slf_vtable(slf_deconstructor_soft_save_num, slf_action_soft_save_num, static_cast<DWORD*>((void*)0x89bcb4));
+    hook_slf_vtable(slf_deconstructor_spiderman_add_hero_points_num, slf_action_spiderman_add_hero_points_num, static_cast<DWORD*>((void*)0x89caa4));
+    hook_slf_vtable(slf_deconstructor_spiderman_bank_stylepoints, slf_action_spiderman_bank_stylepoints, static_cast<DWORD*>((void*)0x89c91c));
+    hook_slf_vtable(slf_deconstructor_spiderman_break_web, slf_action_spiderman_break_web, static_cast<DWORD*>((void*)0x89c9e4));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_add_shake_num_num_num, slf_action_spiderman_camera_add_shake_num_num_num, static_cast<DWORD*>((void*)0x89cb34));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_autocorrect_num, slf_action_spiderman_camera_autocorrect_num, static_cast<DWORD*>((void*)0x89c924));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_clear_fixedstatic, slf_action_spiderman_camera_clear_fixedstatic, static_cast<DWORD*>((void*)0x89cafc));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_enable_combat_num, slf_action_spiderman_camera_enable_combat_num, static_cast<DWORD*>((void*)0x89cb24));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_enable_lookaround_num, slf_action_spiderman_camera_enable_lookaround_num, static_cast<DWORD*>((void*)0x89cb1c));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_fixedstatic_vector3d_vector3d, slf_action_spiderman_camera_set_fixedstatic_vector3d_vector3d, static_cast<DWORD*>((void*)0x89caf4));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_follow_entity, slf_action_spiderman_camera_set_follow_entity, static_cast<DWORD*>((void*)0x89cb2c));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_hero_underwater_num, slf_action_spiderman_camera_set_hero_underwater_num, static_cast<DWORD*>((void*)0x89cb3c));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_interpolation_time_num, slf_action_spiderman_camera_set_interpolation_time_num, static_cast<DWORD*>((void*)0x89cb14));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_lockon_min_distance_num, slf_action_spiderman_camera_set_lockon_min_distance_num, static_cast<DWORD*>((void*)0x89cb04));
+    hook_slf_vtable(slf_deconstructor_spiderman_camera_set_lockon_y_offset_num, slf_action_spiderman_camera_set_lockon_y_offset_num, static_cast<DWORD*>((void*)0x89cb0c));
+    hook_slf_vtable(slf_deconstructor_spiderman_charged_jump, slf_action_spiderman_charged_jump, static_cast<DWORD*>((void*)0x89c98c));
+    hook_slf_vtable(slf_deconstructor_spiderman_enable_control_button_num_num, slf_action_spiderman_enable_control_button_num_num, static_cast<DWORD*>((void*)0x89ca94));
+    hook_slf_vtable(slf_deconstructor_spiderman_enable_lockon_num, slf_action_spiderman_enable_lockon_num, static_cast<DWORD*>((void*)0x89c9ac));
+    hook_slf_vtable(slf_deconstructor_spiderman_engage_lockon_num, slf_action_spiderman_engage_lockon_num, static_cast<DWORD*>((void*)0x89c9b4));
+    hook_slf_vtable(slf_deconstructor_spiderman_engage_lockon_num_entity, slf_action_spiderman_engage_lockon_num_entity, static_cast<DWORD*>((void*)0x89c9bc));
+    hook_slf_vtable(slf_deconstructor_spiderman_get_hero_points, slf_action_spiderman_get_hero_points, static_cast<DWORD*>((void*)0x89ca9c));
+    hook_slf_vtable(slf_deconstructor_spiderman_get_max_zip_length, slf_action_spiderman_get_max_zip_length, static_cast<DWORD*>((void*)0x89c9dc));
+    hook_slf_vtable(slf_deconstructor_spiderman_get_spidey_sense_level, slf_action_spiderman_get_spidey_sense_level, static_cast<DWORD*>((void*)0x89c99c));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_crawling, slf_action_spiderman_is_crawling, static_cast<DWORD*>((void*)0x89c934));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_falling, slf_action_spiderman_is_falling, static_cast<DWORD*>((void*)0x89c964));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_jumping, slf_action_spiderman_is_jumping, static_cast<DWORD*>((void*)0x89c96c));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_on_ceiling, slf_action_spiderman_is_on_ceiling, static_cast<DWORD*>((void*)0x89c944));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_on_ground, slf_action_spiderman_is_on_ground, static_cast<DWORD*>((void*)0x89c94c));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_on_wall, slf_action_spiderman_is_on_wall, static_cast<DWORD*>((void*)0x89c93c));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_running, slf_action_spiderman_is_running, static_cast<DWORD*>((void*)0x89c95c));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_sprint_crawling, slf_action_spiderman_is_sprint_crawling, static_cast<DWORD*>((void*)0x89c984));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_sprinting, slf_action_spiderman_is_sprinting, static_cast<DWORD*>((void*)0x89c974));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_swinging, slf_action_spiderman_is_swinging, static_cast<DWORD*>((void*)0x89c954));
+    hook_slf_vtable(slf_deconstructor_spiderman_is_wallsprinting, slf_action_spiderman_is_wallsprinting, static_cast<DWORD*>((void*)0x89c97c));
+    hook_slf_vtable(slf_deconstructor_spiderman_lock_spider_reflexes_off, slf_action_spiderman_lock_spider_reflexes_off, static_cast<DWORD*>((void*)0x89ca24));
+    hook_slf_vtable(slf_deconstructor_spiderman_lock_spider_reflexes_on, slf_action_spiderman_lock_spider_reflexes_on, static_cast<DWORD*>((void*)0x89ca1c));
+    hook_slf_vtable(slf_deconstructor_spiderman_lockon_camera_engaged, slf_action_spiderman_lockon_camera_engaged, static_cast<DWORD*>((void*)0x89ca0c));
+    hook_slf_vtable(slf_deconstructor_spiderman_lockon_mode_engaged, slf_action_spiderman_lockon_mode_engaged, static_cast<DWORD*>((void*)0x89ca04));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_camera_target_entity, slf_action_spiderman_set_camera_target_entity, static_cast<DWORD*>((void*)0x89ca14));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_desired_mode_num_vector3d_vector3d, slf_action_spiderman_set_desired_mode_num_vector3d_vector3d, static_cast<DWORD*>((void*)0x89c9ec));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_health_beep_min_max_cooldown_time_num_num, slf_action_spiderman_set_health_beep_min_max_cooldown_time_num_num, static_cast<DWORD*>((void*)0x89c9f4));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_health_beep_threshold_num, slf_action_spiderman_set_health_beep_threshold_num, static_cast<DWORD*>((void*)0x89c9fc));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_hero_meter_empty_rate_num, slf_action_spiderman_set_hero_meter_empty_rate_num, static_cast<DWORD*>((void*)0x89cb44));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_max_height_num, slf_action_spiderman_set_max_height_num, static_cast<DWORD*>((void*)0x89c9cc));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_max_zip_length_num, slf_action_spiderman_set_max_zip_length_num, static_cast<DWORD*>((void*)0x89c9d4));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_min_height_num, slf_action_spiderman_set_min_height_num, static_cast<DWORD*>((void*)0x89c9c4));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_spidey_sense_level_num, slf_action_spiderman_set_spidey_sense_level_num, static_cast<DWORD*>((void*)0x89c994));
+    hook_slf_vtable(slf_deconstructor_spiderman_set_swing_anchor_max_sticky_time_num, slf_action_spiderman_set_swing_anchor_max_sticky_time_num, static_cast<DWORD*>((void*)0x89c9a4));
+    hook_slf_vtable(slf_deconstructor_spiderman_subtract_hero_points_num, slf_action_spiderman_subtract_hero_points_num, static_cast<DWORD*>((void*)0x89caac));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_alternating_wall_run_occurrence_threshold_num, slf_action_spiderman_td_set_alternating_wall_run_occurrence_threshold_num, static_cast<DWORD*>((void*)0x89ca74));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_alternating_wall_run_time_threshold_num, slf_action_spiderman_td_set_alternating_wall_run_time_threshold_num, static_cast<DWORD*>((void*)0x89ca6c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_big_air_height_threshold_num, slf_action_spiderman_td_set_big_air_height_threshold_num, static_cast<DWORD*>((void*)0x89ca34));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_continuous_air_swings_threshold_num, slf_action_spiderman_td_set_continuous_air_swings_threshold_num, static_cast<DWORD*>((void*)0x89ca4c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_gain_altitude_height_threshold_num, slf_action_spiderman_td_set_gain_altitude_height_threshold_num, static_cast<DWORD*>((void*)0x89ca54));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_near_miss_trigger_radius_num, slf_action_spiderman_td_set_near_miss_trigger_radius_num, static_cast<DWORD*>((void*)0x89ca84));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_near_miss_velocity_threshold_num, slf_action_spiderman_td_set_near_miss_velocity_threshold_num, static_cast<DWORD*>((void*)0x89ca8c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_orbit_min_radius_threshold_num, slf_action_spiderman_td_set_orbit_min_radius_threshold_num, static_cast<DWORD*>((void*)0x89ca3c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_soft_landing_velocity_threshold_num, slf_action_spiderman_td_set_soft_landing_velocity_threshold_num, static_cast<DWORD*>((void*)0x89ca5c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_super_speed_speed_threshold_num, slf_action_spiderman_td_set_super_speed_speed_threshold_num, static_cast<DWORD*>((void*)0x89ca7c));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_swinging_wall_run_time_threshold_num, slf_action_spiderman_td_set_swinging_wall_run_time_threshold_num, static_cast<DWORD*>((void*)0x89ca64));
+    hook_slf_vtable(slf_deconstructor_spiderman_td_set_wall_sprint_time_threshold_num, slf_action_spiderman_td_set_wall_sprint_time_threshold_num, static_cast<DWORD*>((void*)0x89ca44));
+    hook_slf_vtable(slf_deconstructor_spiderman_unlock_spider_reflexes, slf_action_spiderman_unlock_spider_reflexes, static_cast<DWORD*>((void*)0x89ca2c));
+    hook_slf_vtable(slf_deconstructor_spiderman_wait_add_threat_entity_str_num_num, slf_action_spiderman_wait_add_threat_entity_str_num_num, static_cast<DWORD*>((void*)0x89cb4c));
+    hook_slf_vtable(slf_deconstructor_spidey_can_see_vector3d, slf_action_spidey_can_see_vector3d, static_cast<DWORD*>((void*)0x89c92c));
+    hook_slf_vtable(slf_deconstructor_sqrt_num, slf_action_sqrt_num, static_cast<DWORD*>((void*)0x89a914));
+    hook_slf_vtable(slf_deconstructor_start_patrol_str, slf_action_start_patrol_str, static_cast<DWORD*>((void*)0x89c4f4));
+    hook_slf_vtable(slf_deconstructor_stop_all_sounds, slf_action_stop_all_sounds, static_cast<DWORD*>((void*)0x89b514));
+    hook_slf_vtable(slf_deconstructor_stop_credits, slf_action_stop_credits, static_cast<DWORD*>((void*)0x89bb00));
+    hook_slf_vtable(slf_deconstructor_stop_vibration, slf_action_stop_vibration, static_cast<DWORD*>((void*)0x89a7cc));
+    hook_slf_vtable(slf_deconstructor_subtitle_num_num_num_num_num_num, slf_action_subtitle_num_num_num_num_num_num, static_cast<DWORD*>((void*)0x89bcc4));
+    hook_slf_vtable(slf_deconstructor_swap_hero_costume_str, slf_action_swap_hero_costume_str, static_cast<DWORD*>((void*)0x89c4d4));
+    hook_slf_vtable(slf_deconstructor_text_width_str, slf_action_text_width_str, static_cast<DWORD*>((void*)0x89a7ac));
+    hook_slf_vtable(slf_deconstructor_timer_widget_get_count_up, slf_action_timer_widget_get_count_up, static_cast<DWORD*>((void*)0x89bb70));
+    hook_slf_vtable(slf_deconstructor_timer_widget_get_time, slf_action_timer_widget_get_time, static_cast<DWORD*>((void*)0x89bb60));
+    hook_slf_vtable(slf_deconstructor_timer_widget_set_count_up_num, slf_action_timer_widget_set_count_up_num, static_cast<DWORD*>((void*)0x89bb68));
+    hook_slf_vtable(slf_deconstructor_timer_widget_set_time_num, slf_action_timer_widget_set_time_num, static_cast<DWORD*>((void*)0x89bb58));
+    hook_slf_vtable(slf_deconstructor_timer_widget_start, slf_action_timer_widget_start, static_cast<DWORD*>((void*)0x89bb48));
+    hook_slf_vtable(slf_deconstructor_timer_widget_stop, slf_action_timer_widget_stop, static_cast<DWORD*>((void*)0x89bb50));
+    hook_slf_vtable(slf_deconstructor_timer_widget_turn_off, slf_action_timer_widget_turn_off, static_cast<DWORD*>((void*)0x89bb40));
+    hook_slf_vtable(slf_deconstructor_timer_widget_turn_on, slf_action_timer_widget_turn_on, static_cast<DWORD*>((void*)0x89bb38));
+
+
+
+
+   
+
+}
+
+
+
 void close_debug()
 {
         debug_enabled = 0;
@@ -1813,6 +11527,9 @@ void close_debug()
         game_unpause(g_game_ptr());
         g_game_ptr()->enable_physics(true);
 }
+
+
+
 
 void handle_debug_entry(debug_menu_entry* entry, custom_key_type) {
 	current_menu = static_cast<decltype(current_menu)>(entry->data);
@@ -3919,6 +13636,48 @@ void sub_B818C0(const float* a2, debug_menu_entry* entry)
         v2[3] = a2[3];
 }
 
+
+int g_TOD_ptr = 0091E000;
+void time_of_day_name_generator(debug_menu_entry* entry)
+{
+
+        DWORD lastTOD = (DWORD)entry->data;
+        DWORD currentTOD = *g_TOD;
+        if (currentTOD == lastTOD) {
+        return;
+        }
+
+        snprintf(entry->text, MAX_CHARS, "Time of Day: %d", currentTOD);
+        lastTOD = currentTOD;
+}
+
+
+
+
+
+
+
+
+
+
+
+void time_of_day_handler(debug_menu_entry* entry, custom_key_type key, menu_handler_function original)
+{
+
+        DWORD currentTOD = *g_TOD;
+        switch (key) {
+        case LEFT:
+        us_lighting_switch_time_of_day(modulo(currentTOD - 1, 4));
+        break;
+        case RIGHT:
+        us_lighting_switch_time_of_day(modulo(currentTOD + 1, 4));
+        break;
+        }
+}
+
+
+
+
 extern debug_menu* devopt_flags_menu = nullptr;
 
 void handle_devopt_entry(debug_menu_entry* entry, custom_key_type key_type)
@@ -4897,18 +14656,7 @@ void create_devopt_int_menu(debug_menu * parent)
 
 
 
-namespace spider_monkey {
-    bool is_running()
-    {
-        return (bool) CDECL_CALL(0x004B3B60);
-    }
-}
 
-        void tick()
-{
-
-        CDECL_CALL(0x005D6FC0);
-}
 
 void game_flags_handler(debug_menu_entry *a1)
 {
@@ -5187,10 +14935,24 @@ void create_game_menu(debug_menu* parent)
     create_devopt_int_menu(game_menu);
     create_gamefile_menu(game_menu);
 
-/*
-    auto* extra_menu = create_menu("Extra Options", debug_menu::sort_mode_t::undefined);
+
+
+
+
+    auto* extra_menu = create_menu("Extra Options", (menu_handler_function)handle_extra_entry, 10);
     auto* v15 = create_menu_entry(extra_menu);
     add_debug_menu_entry(game_menu, v15);
+
+
+
+       debug_menu_entry time_of_day (mString { "Time of Day" });
+    const float v5[4] = { -1, 2, 1, 1 };
+    time_of_day.set_fl_values(v5);
+        time_of_day.entry_type = INTEGER;
+        time_of_day.custom_string_generator = time_of_day_name_generator;
+        time_of_day.custom_handler = time_of_day_handler;
+        time_of_day.data = (void*)0xFFFFFFFF;
+        add_debug_menu_entry(extra_menu, &time_of_day);
 
     debug_menu_entry monkeytime = { "Monkey Time", POINTER_BOOL, (void*)0x959E60 };
     add_debug_menu_entry(extra_menu, &monkeytime);
@@ -5204,8 +14966,6 @@ void create_game_menu(debug_menu* parent)
     add_debug_menu_entry(extra_menu, &unlockallcovers);
     debug_menu_entry disablepausemenu = { "Disable Pause Menu", POINTER_BOOL, (void*)0x96B448 };
     add_debug_menu_entry(extra_menu, &disablepausemenu);
-
-    */
 
     auto* entry = create_menu_entry(mString { "Report SLF Recall Timeouts" });
     static bool byte_1597BC0 = false;
@@ -5348,7 +15108,9 @@ void debug_flags_handler(debug_menu_entry* entry)
                 if (geometry_manager::is_scene_analyzer_enabled()) {
                     geometry_manager::enable_scene_analyzer(false);
                 }
-
+             if (spider_monkey::is_running() || !os_developer_options::instance()->get_flag("ENABLE_ZOOM_MAP") || g_game_ptr()->is_physics_enabled()) {
+                show();
+            }
                 is_user_camera_enabled();
 
                 
@@ -5367,6 +15129,7 @@ void debug_flags_handler(debug_menu_entry* entry)
     }
     }
 }
+
 
 
 
@@ -5742,7 +15505,7 @@ void replay_handler(debug_menu_entry* entry)
 {
    auto result = entry->field_E;
     if (!entry->field_E) {
-        active_menu = 0;
+       debug_menu::root_menu = 0;
         had_menu_this_frame = 1;
     }
     debug_menu::hide();
@@ -5836,6 +15599,8 @@ void debug_menu::init() {
 	*/
 }
 
+
+
 BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID reserverd) {
 
 	if (sizeof(region) != 0x134) {
@@ -5844,6 +15609,7 @@ BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID reserverd) {
 
 	memset(keys, 0, sizeof(keys));
 	if (fdwReason == DLL_PROCESS_ATTACH) {
+
 #if 0
 		AllocConsole();
 
@@ -5851,11 +15617,15 @@ BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID reserverd) {
 			MessageBoxA(NULL, "Error", "Couldn't allocate console...Closing", 0);
 			return FALSE;
 		}
+
 #endif
+
 
 		set_text_writeable();
 		set_rdata_writeable();
 		install_patches();
+
+                hook_slf_vtables();
      
 
 	}

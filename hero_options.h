@@ -37,10 +37,10 @@ struct hero_options
         this->m_heros[this->get_hero_from_name(a2)] = a3;
     }
 
-const char* hero_list[11] = { "ultimate_spiderman", "arachno_man_costume", "usm_wrestling_costume", "usm_blacksuit_costume", "peter_parker", "peter_hooded", "peter_parker_costume", "peter_hooded_costume", "venom", "venom_spider", "carnage" };
+const char* hero_list[18] = { "ultimate_spiderman", "arachno_man_costume", "usm_wrestling_costume", "usm_blacksuit_costume", "peter_parker", "peter_hooded", "peter_parker_costume", "peter_hooded_costume", "venom", "venom_spider", "carnage", "wolverine", "rhino", "green_goblin", "electro_suit", "silver_sable", "electro_nosuit", "mary_jane" };
 
 
-    bool hero_defaults[11] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    bool hero_defaults[18] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
     void _tcf_1_3()
@@ -122,4 +122,4 @@ const char* hero_list[11] = { "ultimate_spiderman", "arachno_man_costume", "usm_
 
 };
 
-bool hero_defaults[11] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+bool hero_defaults[18] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

@@ -3,7 +3,14 @@
 #include "variable.h"
 #include "common.h"
 
-struct input_mgr
+
+struct device_id_t {
+    int field_0;
+
+    };
+
+
+    struct input_mgr
 {
     int field_0;
     struct {
@@ -18,6 +25,13 @@ struct input_mgr
         {
             void (__fastcall *func)(void *) = (decltype(func)) 0x005C5430;
             func(this);
+        }
+
+        float get_control_state(int a2, device_id_t a3) const
+
+        {
+            void(__fastcall * func)(void*, int, device_id_t) = (decltype(func))0x005D86D0;
+            func(0, a2, a3);
         }
 
     } *rumble_ptr;

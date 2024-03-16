@@ -1,6 +1,7 @@
 #pragma once
 
 #include "variable.h"
+#include "entity_base.h"
 #include "bit.h"
 
 
@@ -73,19 +74,36 @@ struct world_dynamics_system
         func(this, nullptr);
     }
 
+
         Var<world_dynamics_system*> g_spiderman_camera_ptr { 0x00959A70 };
+
 
     void remove_player(int player_num)
     {
 
         if (this->num_players == 1) {
-           this->unload_hero_packfile();
+
+            
+
         void(__fastcall * func)(void*, void*, int) = (decltype(func))0x00558550;
 
         func(this, nullptr, player_num);
         }
     }
 
+
+        void wds_remove_player(int player_num, debug_menu_entry* entry, bool a2)
+    {
+
+        if (this->num_players == 1) {
+        entry->entry_type = BOOLEAN_E;
+        entry->data = (void*)a2;
+
+        void(__fastcall * func)(void*, void*, int) = (decltype(func))0x00558550;
+
+        func(this, nullptr, player_num);
+        }
+    }
 
 
     void malor_point(const vector3d *a2, int a3, bool a4)

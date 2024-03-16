@@ -82,7 +82,7 @@ struct os_developer_options
     }
 
 
-    mString* get_hero_name(int a1)
+    mString* get_hero_name()
     {
         if constexpr (1) {
             static Var<int> dword_96A4AC { 0x0096A4AC };

@@ -15,22 +15,27 @@
 #include "string_hash.h"
 #include "wds.h"
 
+
 #include <cassert>
 
 enum class hero_status_e {
     UNDEFINED = 0,
     REMOVE_PLAYER = 1,
     ADD_PLAYER = 2,
-    CHANGE_HEALTH_TYPE = 3,
+    ADD_PLAYER_ = 3,
+    CHANGE_HEALTH_TYPE = 4,
 } hero_status;
 
 enum class hero_enabled_e {
-    ENABLED = 1,
+     SET_TRUE = 1,
 } hero_enabled;
 
 enum class hero_disabled_e {
-    DISABLED = 0,
+    SET_FALSE = 0,
 } hero_disabled;
+
+
+
 
 constexpr auto NUM_CHARS = 38;
 
@@ -75,7 +80,7 @@ const char* char_list[] = {
     "gang1"
 };
 
-static constexpr auto NUM_HEROES = 11;
+
 
 
 
@@ -133,7 +138,7 @@ void populate_level_select_menu(debug_menu_entry* entry);
 
 const char *current_costume = "ultimate_spiderman";
 
-const char* hero_list[] = { "ultimate_spiderman", "arachno_man_costume", "usm_wrestling_costume", "usm_blacksuit_costume", "peter_parker", "peter_hooded", "peter_parker_costume", "peter_hooded_costume", "venom", "venom_spider", "carnage" };
+const char* hero_list[18] = { "ultimate_spiderman", "arachno_man_costume", "usm_wrestling_costume", "usm_blacksuit_costume", "peter_parker", "peter_hooded", "peter_parker_costume", "peter_hooded_costume", "venom", "venom_spider", "carnage", "wolverine", "rhino", "green_goblin", "electro_suit", "silver_sable", "electro_nosuit", "mary_jane" };
 
 void handle_hero_select_entry(debug_menu_entry* entry);
 
@@ -167,25 +172,7 @@ void start_hero()
     g_game_ptr()->enable_physics(true);
 }
 
-void start_hero1(debug_menu_entry* entry)
-{
-    debug_enabled = 0;
-    menu_disabled = 0;
-    auto v3 = entry->get_bval();
-    entry->set_bval(!v3, false);
-    game_unpaused(g_game_ptr());
-    g_game_ptr()->enable_physics(true);
-}
 
-void start_hero2(debug_menu_entry* entry)
-{
-    debug_enabled = 0;
-    menu_disabled = 0;
-    auto v3 = entry->get_bval();
-    entry->set_bval(!v3, true);
-    game_unpaused(g_game_ptr());
-    g_game_ptr()->enable_physics(true);
-}
 
 void character_toggle_handler(debug_menu_entry* entry)
 {
@@ -331,7 +318,7 @@ void level_select_handler(debug_menu_entry* entry)
         }
     }
 
-    g_game_ptr()->advance_state_load_level(-1.0);
+    g_game_ptr()->load_new_level(v15,-1);
 }
 
 
@@ -353,7 +340,7 @@ void populate_level_select_menu(debug_menu_entry* entry)
     debug_menu_entry v28 { hero_select_menu };
 
     head_menu->add_entry(&v28);
-    for (auto i = 0u; i < 11u; ++i) {
+    for (auto i = 0u; i < 18u; ++i) {
         auto v6 = RESOURCE_KEY_TYPE_PACK;
         string_hash v5 { (hero_list)[i] };
         auto v11 = resource_key { v5, v6 };
@@ -361,13 +348,16 @@ void populate_level_select_menu(debug_menu_entry* entry)
         if (v30) {
             mString v35 { hero_list[i] };
             debug_menu_entry v37 { v35.c_str() };
+
             v37.set_game_flags_handler(hero_toggle_handler);
-            v37.set_bval(false);
+            v37.set_bval2(false);
             v37.m_id = i;
             v37.set_frame_advance_cb(hero_entry_callback);
             hero_select_menu->add_entry(&v37);
         }
-    }
+            }
+        
+    
  
    
 
@@ -433,8 +423,25 @@ void hero_entry_callback(debug_menu_entry* entry)
     case hero_status_e::REMOVE_PLAYER: {
         g_world_ptr()->remove_player(v18 - 1);
         hero_status = hero_status_e::ADD_PLAYER;
-        frames_to_skip = 2;
+        frames_to_skip = 3;
         g_game_ptr()->enable_marky_cam(true, true, -1000.0, 0.0);
+        break;
+    }
+    case hero_status_e::ADD_PLAYER_: {
+        auto v1 = frames_to_skip--;
+        if (v1 <= 0) {
+            assert(hero_selected > -1 && hero_selected < 11);
+
+            [[maybe_unused]] auto v2 = g_world_ptr()->add_player(mString { hero_list[hero_selected] });
+
+            auto v10 = v2 <= v18;
+
+            assert(v10 && "Cannot add another_player");
+
+            g_game_ptr()->enable_marky_cam(false, true, -1000.0, 0.0);
+            frames_to_skip = 2;
+            hero_status = hero_status_e::CHANGE_HEALTH_TYPE;
+        }
         break;
     }
     case hero_status_e::ADD_PLAYER: {
@@ -444,16 +451,15 @@ void hero_entry_callback(debug_menu_entry* entry)
 
             [[maybe_unused]] auto v2 = g_world_ptr()->add_player(mString { hero_list[hero_selected] });
 
-                        auto v10 = v2 <= v18;
+            auto v10 = v2 <= v18;
 
             assert(v10 && "Cannot add another_player");
-            
 
             
-
+            g_world_ptr()->remove_player(v18 - 0);
             g_game_ptr()->enable_marky_cam(false, true, -1000.0, 0.0);
-            frames_to_skip = 2;
-            hero_status = hero_status_e::CHANGE_HEALTH_TYPE;
+            frames_to_skip = 3;
+            hero_status = hero_status_e::ADD_PLAYER_;
         }
         break;
     }
@@ -487,23 +493,35 @@ void hero_entry_callback(debug_menu_entry* entry)
             g_femanager().IGO->hero_health->SetShown(true);
             hero_status = hero_status_e::UNDEFINED;
                 start_hero();
-            switch (hero_enabled) {
-                case hero_enabled_e::ENABLED: {
-                start_hero1(entry);
-                switch (hero_disabled) {
-                case hero_disabled_e::DISABLED: {
-                    start_hero2(entry);
+
 
  
                 
+        }
+        switch (hero_enabled) {
+    case hero_enabled_e::SET_TRUE: {
+        auto v1 = frames_to_skip--;
+        if (v1 <= 0) {
+            assert(hero_selected > -1 && hero_selected < 11);
+
+            [[maybe_unused]] auto v2 = g_world_ptr()->add_player(mString { hero_list[hero_selected] });
+
+            auto v10 = v2 <= v18;
+
+            assert(v10 && "Cannot add another_player");
+
+            auto v3 = entry->get_bval();
+            entry->set_bval(!v3, true);
+            g_world_ptr()->remove_player(v18 - 0);
+            g_game_ptr()->enable_marky_cam(false, true, -1000.0, 0.0);
+            frames_to_skip = 3;
+            hero_enabled = hero_enabled_e::SET_TRUE;
         }
         break;
     }
     default:
         break;
     }
-    }
-        }
     }
     }
 }
