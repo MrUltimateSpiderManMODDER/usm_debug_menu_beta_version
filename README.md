@@ -6,29 +6,12 @@
 
 ## Download
 
-Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_menu_beta_version/releases/tag/v1)
-
-## How to Compile
-
-Use Visual Studio Only and compile in release mode.
-
+Get the menu from [here](https://github.com/krystalgamer/usm-debug-menu/releases)
 
 ## Installation
 
 * Rename `binkw32.dll` in the game's folder to `binkw32_.dll`
-* Copy the `binkw32_.dll` to the game's folder
-
-## Installation Debug Menu with Modded exe
-
-* Rename `binkw32.dll` in the game's folder to `debug_menu.dll`
-* Copy the `debug_menu.dll` to the game's folder
-
-## Download The modded exe
-
-Get the menu from [here](https://github.com/MrUltimateSpiderManMODDER/usm_debug_menu_beta_version/releases/tag/v1)
-
-Note: you have need to disable antivirus because detect malvare.
-
+* Copy the `binkw32.dll` in the zip file to the game's folder
 
 ## Usage
 
@@ -37,15 +20,6 @@ Note: you have need to disable antivirus because detect malvare.
 * **ENTER** - executes the selected option
 * **LEFT/RIGHT Arrows** - changes the value of the current **boolean** option
 * **ESCAPE** - go to previous menu
-
-## Usage DS4/DS5 Controller
-
-* **PS BUTTON** - opens and closes the menu
-* **UP/DOWN Pads** - moves the current select option up and down
-* **CROSS BUTTON** - executes the selected option
-* **LEFT/RIGHT Pad Arrows** - changes the value of the current **boolean** option
-* **CIRCLE BUTTON** - go to previous menu
-
 
 ## Current implemented options
 
@@ -57,58 +31,27 @@ Allows to teleport to any in-game region
 
 ### District variants
 
-Allows to switch between variants of given regions.
+Allows to switch between variants of given regions
 
-### Entity variants
-
-There are list of entity variants menu.
-
-### Missions
-
-You can replay all missions of this game and a few emergencies.
-
-
-### Level Select
-
-There are list of levels available that not working and crash the game if you load city option
-
-Note exist only --REBOOT-- and city options.
-
-
-
-### Hero Select
+### Char Select
 
 Allows to switch between *all* available characters
 
-**NOTE**: `peter_parker` and `peter_hooded` are versions of peter without powers, used in the first missions of the game.
+**NOTE**: `peter_parker` and `peter_hooded` are versions of peter without powers, used in the first missions of the game
 
-### Game
+### Options
 
-Allows to modify in-game flags that controls certain behaviours.
+Allows to modify in-game flags that controls certain behaviours
 
-### DevOpt Flags
-
-There are list of flags options available
-
-Allows to modify flags that controls certain behaviours.
-
-### DevOpt Ints
-
-There are list of ints options available
-
-Allows to modify ints that controls certain behaviours.
+* Live in Glass House: disables the `Area unavailable` messages
 
 ### Script
 
-Access to in-game scripts that allow the player to tap into debug features.
+Access to in-game scripts that allow the player to tap into debug features
 
 ### Progression
 
-Set your progress to any point in the game.
-
-### Camera
-
-you can switch camera states Chase, User and SceneAnalizer.
+Set your progress to any point in the game
 
 ## Extending functionality
 
