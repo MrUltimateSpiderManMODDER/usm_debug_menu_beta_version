@@ -29,6 +29,8 @@ enum debug_menu_entry_type {
     FLOAT_E,
     POINTER_FLOAT,
     INTEGER,
+    INTEGER2,
+    INTEGER_INT,
     POINTER_INT,
     BOOLEAN_E,
     BOOLEAN_F,
@@ -51,6 +53,7 @@ const char* to_string(debug_menu_entry_type entry_type)
         "FLOAT_E",
         "POINTER_FLOAT",
         "INTEGER",
+        "INTEGER_INT",
         "POINTER_INT",
         "BOOLEAN_E",
         "BOOLEAN_F",
@@ -255,6 +258,25 @@ struct debug_menu_entry {
 
             break;
         }
+        case INTEGER2:
+        case INTEGER_INT: {
+            float v7 = (a4 ? this->field_20[2] * this->field_20[3] : this->field_20[2]);
+
+            printf("%f\n", v7);
+            auto v8 = std::abs(v7);
+            if (v8 < 1.0) {
+                v8 = 1.0;
+            }
+
+            auto v4 = this->get_ival3();
+            if (a3 >= 0.0) {
+                this->set_ival3((int)(v4 + v8), true);
+            } else {
+                this->set_ival3((int)(v4 - v8), true);
+            }
+
+            break;
+        }
         case CAMERA_FLOAT:
         case CAMERA_INT: {
             float v7 = (a4 ? this->field_20[2] * this->field_20[3] : this->field_20[2]);
@@ -278,6 +300,7 @@ struct debug_menu_entry {
             return;
         }
     }
+
 
     void set_ival2(int a2)
     {
@@ -476,6 +499,20 @@ struct debug_menu_entry {
         assert(0);
         return 0;
     }
+    int get_ival3()
+    {
+        auto v2 = this->entry_type;
+        if (v2 == INTEGER2) {
+            return (int)this->data;
+        }
+
+        if (v2 == INTEGER_INT) {
+            return *(int*)this->data;
+        }
+
+        assert(0);
+        return 0;
+    }
 
     bool is_value_initialized() const
     {
@@ -518,6 +555,32 @@ struct debug_menu_entry {
         }
 
         return this->get_ival();
+    }
+
+        int set_ival3(int a2, bool a3)
+    {
+        if (!this->is_value_initialized()) {
+            if ((float)a2 > this->field_20[1])
+                a2 = (int)this->field_20[1];
+
+            if (this->field_20[0] > (float)a2)
+                a2 = (int)this->field_20[0];
+
+            auto v4 = this->entry_type;
+            if (v4 == INTEGER2) {
+                this->data = (void*)a2;
+            } else if (v4 == INTEGER_INT) {
+                *((int*)this->data) = a2;
+            } else {
+                assert(0);
+            }
+
+            if (this->m_game_flags_handler != nullptr && a3) {
+                this->m_game_flags_handler(this);
+            }
+        }
+
+        return this->get_ival3();
     }
 
         int set_ival2(int a2, bool a3)
@@ -698,6 +761,12 @@ struct debug_menu_entry {
         this->data = (void *) a2;
     }
 
+        void set_ival3(int a2)
+    {
+        this->entry_type = INTEGER2;
+        this->data = (void*)a2;
+    }
+
     void set_fl_values(const float *a2)
     {
         auto *v2 = this->field_20;
@@ -779,6 +848,14 @@ std::string entry_render_callback_default(debug_menu_entry* entry)
     case INTEGER:
     case POINTER_INT: {
         auto val = entry->get_ival();
+
+        char str[100] {};
+        sprintf(str, "%d", val);
+        return { str };
+    }
+    case INTEGER2:
+    case INTEGER_INT: {
+        auto val = entry->get_ival3();
 
         char str[100] {};
         sprintf(str, "%d", val);

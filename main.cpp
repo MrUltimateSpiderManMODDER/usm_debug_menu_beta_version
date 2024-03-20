@@ -1335,40 +1335,6 @@ void custom()
         g_game_ptr()->enable_physics(false);
 }
 
-namespace spider_monkey {
-    bool is_running()
-    {
-        return (bool) CDECL_CALL(0x004B3B60);
-    }
-}
-
-        void tick()
-{
-
-        CDECL_CALL(0x005D6FC0);
-}
-
-                static inline debug_menu* root_menu = nullptr;
-
-
-
-void grab_focus()
-{
-    physics_state_on_exit = !g_game_ptr()->is_physics_enabled();
-    g_game_ptr()->enable_physics(false);
-    has_focus = true;
-}
-
-void show()
-{
-    root_menu = debug_menu::root_menu;
-    grab_focus();
-}
-
-static void hide()
-{
-    close_debug();
-}
 
 
 
@@ -1530,7 +1496,7 @@ void menu_input_handler(int keyboard, int SCROLL_SPEED) {
 
                 debug_menu_entry* cur = &current_menu->entries[current_menu->window_start + current_menu->cur_index];
 
-                if (cur->entry_type == POINTER_BOOL || cur->entry_type == POINTER_NUM || cur->entry_type == CAMERA_FLOAT || cur->entry_type == POINTER_INT || cur->entry_type == POINTER_FLOAT || cur->entry_type == FLOAT_E || cur->entry_type == INTEGER) {
+                if (cur->entry_type == POINTER_BOOL || cur->entry_type == POINTER_NUM || cur->entry_type == CAMERA_FLOAT || cur->entry_type == POINTER_INT || cur->entry_type == POINTER_FLOAT || cur->entry_type == FLOAT_E || cur->entry_type == INTEGER2 || cur->entry_type == INTEGER) {
        custom_key_type pressed = (is_menu_key_pressed(MENU_LEFT, keyboard) ? LEFT : RIGHT);
                         if (is_menu_key_pressed(MENU_LEFT, keyboard)) {
                             cur->on_change(-1.0, false);
@@ -14656,6 +14622,38 @@ void create_devopt_int_menu(debug_menu * parent)
 
 
 
+namespace spider_monkey {
+        bool is_running()
+        {
+            return (bool)CDECL_CALL(0x004B3B60);
+        }
+        }
+
+        void tick()
+        {
+
+            CDECL_CALL(0x005D6FC0);
+        }
+
+        static inline debug_menu* root_menu = nullptr;
+
+        void grab_focus()
+        {
+            physics_state_on_exit = !g_game_ptr()->is_physics_enabled();
+            g_game_ptr()->enable_physics(false);
+            has_focus = true;
+        }
+
+        void show()
+        {
+            root_menu = debug_menu::root_menu;
+            grab_focus();
+        }
+
+        static void hide()
+        {
+            close_debug();
+        }
 
 
 void game_flags_handler(debug_menu_entry *a1)
@@ -14726,7 +14724,7 @@ void game_flags_handler(debug_menu_entry *a1)
     }
     case 5u: //God Mode
     {
-        auto v4 = a1->get_ival();
+        auto v4 = a1->get_ival3();
         set_god_mode(v4);
         debug_menu::hide();
         break;
@@ -15005,7 +15003,7 @@ void create_game_menu(debug_menu* parent)
 
 
     auto* entry6 = create_menu_entry(mString { "God Mode" });
-    entry6->set_ival(os_developer_options::instance()->get_int(mString { "GOD_MODE" }));
+    entry6->set_ival3(os_developer_options::instance()->get_int(mString { "GOD_MODE" }));
     const float v2[4] = { 0, 5, 1, 1 };
     entry6->set_fl_values(v2);
     entry6->set_game_flags_handler(game_flags_handler);
@@ -15163,6 +15161,74 @@ void create_ai_menu(debug_menu* parent)
     entry27->set_min_value(-1000.0);
     ai_menu19->add_entry(entry27);
 
+    auto* entry28 = create_menu_entry(mString { "0x055682a0" });
+    static float _0x055682a0 = 6.00;
+    entry28->set_pt_fval(&_0x055682a0);
+    entry28->set_max_value(1000.0);
+    entry28->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry28);
+
+    auto* entry29 = create_menu_entry(mString { "0x0674abb8" });
+    static float _0x0674abb8 = 30.00;
+    entry29->set_pt_fval(&_0x0674abb8);
+    entry29->set_max_value(1000.0);
+    entry29->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry29);
+
+    auto* entry30 = create_menu_entry(mString { "0x0848ac5d" });
+    static float _0x0848ac5d = 0.00;
+    entry30->set_pt_fval(&_0x0848ac5d);
+    entry30->set_max_value(1000.0);
+    entry30->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry30);
+
+    auto* entry31 = create_menu_entry(mString { "0x08e1b441" });
+    static int _0x08e1b441 = 0;
+    entry31->set_p_ival(&_0x08e1b441);
+    ai_menu19->add_entry(entry31);
+
+    auto* entry32 = create_menu_entry(mString { "0x0a0d1f8d" });
+    static int _0x0a0d1f8d = 1;
+    entry32->set_p_ival(&_0x0a0d1f8d);
+    ai_menu19->add_entry(entry32);
+
+    auto* entry33 = create_menu_entry(mString { "0x0d1e4da9" });
+    static float _0x0d1e4da9 = 3.50;
+    entry33->set_pt_fval(&_0x0d1e4da9);
+    entry33->set_max_value(1000.0);
+    entry33->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry33);
+
+    auto* entry34 = create_menu_entry(mString { "0x10c22073" });
+    static float _0x10c22073 = 20.00;
+    entry34->set_pt_fval(&_0x10c22073);
+    entry34->set_max_value(1000.0);
+    entry34->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry34);
+
+
+    auto* entry35 = create_menu_entry(mString { "0x12d1c201" });
+    static float _0x12d1c201 = 90.00;
+    entry35->set_pt_fval(&_0x12d1c201);
+    entry35->set_max_value(1000.0);
+    entry35->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry35);
+
+    auto* entry36 = create_menu_entry(mString { "0x1800362a" });
+    static float _0x1800362a = 6.00;
+    entry36->set_pt_fval(&_0x1800362a);
+    entry36->set_max_value(1000.0);
+    entry36->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry36);
+
+    auto* entry37 = create_menu_entry(mString { "0x183ca8db" });
+    static float _0x183ca8db = 60.00;
+    entry37->set_pt_fval(&_0x183ca8db);
+    entry37->set_max_value(1000.0);
+    entry37->set_min_value(-1000.0);
+    ai_menu19->add_entry(entry37);
+
+
     auto* ai_menu1 = create_menu("0x0001ab00 inode params", debug_menu::sort_mode_t::undefined);
     auto* v2 = create_menu_entry(ai_menu1);
     ai_menu0->add_entry(v2);
@@ -15302,9 +15368,6 @@ void create_ai_menu(debug_menu* parent)
     ai_menu18->add_entry(entry20);
 
 }
-
-
-
 
 
 void create_entity_variants_menu(debug_menu* parent)
